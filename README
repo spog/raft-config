@@ -1,0 +1,41 @@
+RAFT-CONFIG PROJECT
+===================
+
+--------------------------------------------------------------------
+Copyright (C) 2017 Samo Pogacnik <samo_pogacnik@t-2.net>
+All rights reserved.
+
+The "daemonize" software project is provided under the terms of the
+BSD 3-Clause license, which is available in the LICENSE file of this
+project.
+--------------------------------------------------------------------
+
+The raft-config project provides raft-config configuration tool.
+
+Features:
+=========
+
+Building:
+=========
+
+Native build:
+-------------
+
+Out-of-source-build (preferred):
+--------------------------------
+
+In-source-build:
+----------------
+
+Cross build:
+------------
+
+Installation:
+=============
+
+Cleaning:
+=========
+
+U2UP packaging:
+===============
+

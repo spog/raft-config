@@ -1,0 +1,23 @@
+#
+# The RAFT-CONFIG project component specification
+#
+# Copyright (C) 2017 Samo Pogacnik <samo_pogacnik@t-2.net>
+# All rights reserved.
+#
+# This file is part of the RAFT-CONFIG software project.
+# This file is provided under the terms of the BSD 3-Clause license,
+# available in the LICENSE file of the "daemonize" software project.
+#
+
+# For each component package name specific content may be defined:
+# - runtime content,
+# - content provided for development,
+# - debugging content, 
+# - ...
+
+COMP_PACKAGES=(raft_config)
+
+COMP_PACKAGE_raft_config=(runtime)
+
+COMP_PACKAGE_raft_config_runtime=("/usr/sbin/raft-config")
+
