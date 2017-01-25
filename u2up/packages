@@ -19,5 +19,5 @@ COMP_PACKAGES=(raft_config)
 
 COMP_PACKAGE_raft_config=(runtime)
 
-COMP_PACKAGE_raft_config_runtime=("/usr/sbin/raft-config")
+COMP_PACKAGE_raft_config_runtime=("usr/sbin")
 

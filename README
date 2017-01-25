@@ -15,27 +15,39 @@ The raft-config project provides raft-config configuration tool.
 Features:
 =========
 
-Building:
-=========
+Native Build all:
+================
 
 Native build:
--------------
+------------
 
 Out-of-source-build (preferred):
---------------------------------
+-------------------------------
 
-In-source-build:
-----------------
+~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr -d tmp
 
-Cross build:
-------------
+Configure only:
+==============
+
+~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr --conf
+
+Compile only:
+============
+
+~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr --make
 
 Installation:
 =============
 
+~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr -d tmp --inst
+
 Cleaning:
 =========
 
+rm -rf ~/RAFT/build
+
 U2UP packaging:
 ===============
+
+~/RAFT/build$ ./raft_config-0.1.2.u2up [name | version | required | list | extract]
 

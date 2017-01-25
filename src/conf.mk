@@ -12,8 +12,8 @@
 include $(comp_source_DIR)/default.mk
 
 TARGET := raft-config
-TPATH := $(BUILD_PREFIX)/bin
-IPATH := $(INSTALL_PREFIX)/bin
+TPATH := $(BUILD_PREFIX)/sbin
+IPATH := $(INSTALL_PREFIX)/sbin
 
 .PHONY: all
 all: $(TPATH)/$(TARGET) subdirs_all
