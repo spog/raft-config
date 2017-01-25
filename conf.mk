@@ -10,6 +10,7 @@
 #
 
 include $(comp_source_DIR)/default.mk
+TOPDIR := .
 
 SUBDIRS := src
 export SUBDIRS
@@ -17,4 +18,8 @@ export SUBDIRS
 .PHONY: all
 all:
 	$(comp_source_DIR)/default.sh subdirs_make all
+
+.PHONY: install
+install:
+	$(comp_source_DIR)/default.sh subdirs_make install
 

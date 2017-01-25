@@ -20,3 +20,6 @@ all: tool
 tool:
 	touch tool
 
+.PHONY: install
+install:
+

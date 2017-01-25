@@ -20,3 +20,6 @@ all: util
 util:
 	touch util
 
+.PHONY: install
+install:
+

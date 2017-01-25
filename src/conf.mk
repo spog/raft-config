@@ -11,12 +11,39 @@
 
 include $(comp_source_DIR)/default.mk
 
+TARGET := raft-config
+TPATH := $(BUILD_PREFIX)/bin
+IPATH := $(INSTALL_PREFIX)/bin
+
+.PHONY: all
+all: $(TPATH)/$(TARGET) subdirs_all
+
+$(TPATH)/$(TARGET): $(comp_source_DIR)/$(SUBPATH)/raft-config.c $(comp_source_DIR)/$(SUBPATH)/raft-config.h $(TPATH)
+	$(CC) -o $@ $(shell pkg-config --cflags --libs libnl-genl-3.0) $<
+
+$(TPATH):
+	install -d $@
+
+.PHONY: install
+install: $(IPATH) $(IPATH)/$(TARGET)
+
+$(IPATH):
+	install -d $@
+
+$(IPATH)/$(TARGET):
+	install -s $(TPATH)/$(TARGET) $@
+
+##
+# Subdirs to handle:
+##
 SUBDIRS := utils tools
 export SUBDIRS
 
-.PHONY: all
-all: raft-config
+.PHONY: subdirs_all
+subdirs_all:
+	$(comp_source_DIR)/default.sh subdirs_make all
 
-raft-config: $(comp_source_DIR)/$(SUBDIR)/raft-config.c $(comp_source_DIR)/$(SUBDIR)/raft-config.h
-	$(CC) -o $@ $(shell pkg-config --cflags --libs libnl-genl-3.0) $<
+.PHONY: subdirs_install
+subdirs_install:
+	$(comp_source_DIR)/default.sh subdirs_make install
 
