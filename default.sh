@@ -21,7 +21,7 @@ function subdirs_conf()
 	do
 		export SUBDIR
 		mkdir -p $SUBDIR
-		make -C $SUBDIR -f $comp_source_DIR/$TOPDIR/$SUBDIR/$CONFFILE conf
+		make -C $SUBDIR -f $SRCDIR/$TOPDIR/$SUBDIR/$CONFFILE conf
 	done
 }
 
@@ -36,9 +36,10 @@ function generate_makefile()
 	echo "SUBPATH := "$TOPDIR > $MAKEFILE
 	echo "SUBDIR := "$SUBDIR >> $MAKEFILE
 	echo "PREFIX := "$prefix_inst_path >> $MAKEFILE
-	echo "BUILDIR := "$comp_build_DIR >> $MAKEFILE
+	echo "SRCDIR := "$SRCDIR >> $MAKEFILE
+	echo "BUILDIR := "$BUILDIR >> $MAKEFILE
 	echo "export SUBPATH SUBDIR PREFIX BUILDIR" >> $MAKEFILE
-	cat $comp_source_DIR/$TOPDIR/$CONFFILE >> $MAKEFILE
+	cat $SRCDIR/$TOPDIR/$CONFFILE >> $MAKEFILE
 #	echo "Done generating ${TOPDIR}/${MAKEFILE}!"
 	echo "Done!"
 }

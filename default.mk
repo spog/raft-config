@@ -21,9 +21,9 @@ TOPDIR := $(TOPDIR)/$(SUBDIR)
 .PHONY: conf
 
 conf: $(MAKEFILE)
-	@$(comp_source_DIR)/default.sh subdirs_conf $(TOPDIR)
+	@$(SRCDIR)/default.sh subdirs_conf $(TOPDIR)
 
 $(MAKEFILE):
 	@echo "Generating $(TOPDIR)/$@"
-	@$(comp_source_DIR)/default.sh generate_makefile $(SUBDIR)
+	@$(SRCDIR)/default.sh generate_makefile $(SUBDIR)
 

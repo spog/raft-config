@@ -9,7 +9,7 @@
 # available in the LICENSE file of the "daemonize" software project.
 #
 
-include $(comp_source_DIR)/default.mk
+include $(SRCDIR)/default.mk
 TOPDIR := .
 
 SUBDIRS := src
@@ -17,9 +17,9 @@ export SUBDIRS
 
 .PHONY: all
 all:
-	$(comp_source_DIR)/default.sh subdirs_make all
+	$(SRCDIR)/default.sh subdirs_make all
 
 .PHONY: install
 install:
-	$(comp_source_DIR)/default.sh subdirs_make install
+	$(SRCDIR)/default.sh subdirs_make install
 

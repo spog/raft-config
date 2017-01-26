@@ -9,7 +9,7 @@
 # available in the LICENSE file of the "daemonize" software project.
 #
 
-include $(comp_source_DIR)/default.mk
+include $(SRCDIR)/default.mk
 
 SUBDIRS :=
 export SUBDIRS

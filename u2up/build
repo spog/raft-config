@@ -19,7 +19,12 @@ function component_conf()
 {
 	echo "Configuring the project!"
 	#cmake $comp_source_DIR -DCMAKE_INSTALL_PREFIX=$comp_install_dir -Dproject_VERSION_MAJOR=$comp_version_MAJOR -Dproject_VERSION_MINOR=$comp_version_MINOR -Dproject_VERSION_PATCH=$comp_version_PATCH
-	make -f $comp_source_DIR/conf.mk conf
+#	make -f $comp_source_DIR/conf.mk conf
+set -x
+	export SRCDIR=$comp_source_DIR
+	export BUILDIR=$comp_build_DIR
+	make -C $BUILDIR -f $SRCDIR/conf.mk conf
+set +x
 }
 
 function component_make()
