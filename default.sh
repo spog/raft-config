@@ -35,7 +35,7 @@ function generate_makefile()
 	fi
 	echo "SUBPATH := "$TOPDIR > $MAKEFILE
 	echo "SUBDIR := "$SUBDIR >> $MAKEFILE
-	echo "PREFIX := "$prefix_inst_path >> $MAKEFILE
+	echo "PREFIX := "$PREFIX >> $MAKEFILE
 	echo "SRCDIR := "$SRCDIR >> $MAKEFILE
 	echo "BUILDIR := "$BUILDIR >> $MAKEFILE
 	echo "export SUBPATH SUBDIR PREFIX BUILDIR" >> $MAKEFILE

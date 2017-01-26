@@ -5,7 +5,7 @@ RAFT-CONFIG PROJECT
 Copyright (C) 2017 Samo Pogacnik <samo_pogacnik@t-2.net>
 All rights reserved.
 
-The "daemonize" software project is provided under the terms of the
+The "raft-config" software project is provided under the terms of the
 BSD 3-Clause license, which is available in the LICENSE file of this
 project.
 --------------------------------------------------------------------
@@ -15,39 +15,54 @@ The raft-config project provides raft-config configuration tool.
 Features:
 =========
 
-Native Build all:
+Native Build using make directly:
 ================
+Configure only:
+==============
+~/RAFT/build$\
+ export SRCDIR=$PWD/../raft-config;\
+ export BUILDIR=$PWD;\
+ export PREFIX=usr;\
+ make -C $BUILDIR -f $SRCDIR/conf.mk conf
 
-Native build:
-------------
+Compile only:
+============
+~/RAFT/build$ make all
 
-Out-of-source-build (preferred):
--------------------------------
+Installation:
+============
+~/RAFT/build$\
+ export DESTDIR=$PWD/install;\
+ make install
 
+Native Build using U2UP (out-of-source-build):
+=============================================
+Do everything (including the u2up package):
+==========================================
+~$ cd RAFT/build
 ~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr -d tmp
+
+or wthout having build directory prepared:
+-----------------------------------------
+~/RAFT$ raft-config/u2up/u2up-build.sh -b build raft-config/ -p usr -d build/install
 
 Configure only:
 ==============
-
 ~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr --conf
 
 Compile only:
 ============
-
 ~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr --make
 
 Installation:
-=============
-
+============
 ~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr -d tmp --inst
 
 Cleaning:
-=========
-
+========
 rm -rf ~/RAFT/build
 
 U2UP packaging:
-===============
-
+==============
 ~/RAFT/build$ ./raft_config-0.1.2.u2up [name | version | required | list | extract]
 
