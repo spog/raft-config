@@ -20,20 +20,18 @@ Native Build using make directly:
 Configure only:
 ==============
 ~/RAFT/build$\
- export SRCDIR=$PWD/../raft-config;\
- export BUILDIR=$PWD;\
- export PREFIX=usr;\
+ env SRCDIR=$PWD/../raft-config BUILDIR=$PWD PREFIX=usr\
  make -C $BUILDIR -f $SRCDIR/conf.mk conf
 
 Compile only:
 ============
-~/RAFT/build$ make all
+~/RAFT/build$\
+ make all
 
 Installation:
 ============
 ~/RAFT/build$\
- export DESTDIR=$PWD/install;\
- make install
+ env DESTDIR=$PWD/install make install
 
 Native Build using U2UP (out-of-source-build):
 =============================================
