@@ -7,7 +7,7 @@
 #
 # This file is part of the RAFT-CONFIG software project.
 # This file is provided under the terms of the BSD 3-Clause license,
-# available in the LICENSE file of the "daemonize" software project.
+# available in the LICENSE file of the "raft-config" software project.
 #
 #set -x
 set -e
@@ -16,12 +16,14 @@ function subdirs_conf()
 {
 	export TOPDIR=$1
 #	echo "SUBPATH: "$TOPDIR
+#	echo "_SRCDIR_: "$_SRCDIR_
+#	echo "_BUILDIR_: "$_BUILDIR_
 
 	for SUBDIR in $SUBDIRS;
 	do
 		export SUBDIR
 		mkdir -p $SUBDIR
-		make -C $SUBDIR -f $SRCDIR/$TOPDIR/$SUBDIR/$CONFFILE conf
+		make -C $SUBDIR -f $_SRCDIR_/$TOPDIR/$SUBDIR/$CONFFILE conf
 	done
 }
 
@@ -36,10 +38,12 @@ function generate_makefile()
 	echo "SUBPATH := "$TOPDIR > $MAKEFILE
 	echo "SUBDIR := "$SUBDIR >> $MAKEFILE
 	echo "PREFIX := "$PREFIX >> $MAKEFILE
-	echo "SRCDIR := "$SRCDIR >> $MAKEFILE
-	echo "BUILDIR := "$BUILDIR >> $MAKEFILE
-	echo "export SUBPATH SUBDIR PREFIX BUILDIR" >> $MAKEFILE
-	cat $SRCDIR/$TOPDIR/$CONFFILE >> $MAKEFILE
+#	echo "SRCDIR := "$SRCDIR >> $MAKEFILE
+	echo "_SRCDIR_ := "$_SRCDIR_ >> $MAKEFILE
+#	echo "BUILDIR := "$BUILDIR >> $MAKEFILE
+	echo "_BUILDIR_ := "$_BUILDIR_ >> $MAKEFILE
+	echo "export SUBPATH SUBDIR PREFIX _SRCDIR_ _BUILDIR_" >> $MAKEFILE
+	cat $_SRCDIR_/$TOPDIR/$CONFFILE >> $MAKEFILE
 #	echo "Done generating ${TOPDIR}/${MAKEFILE}!"
 	echo "Done!"
 }

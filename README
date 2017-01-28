@@ -18,49 +18,54 @@ Features:
 Native Build using make directly:
 ================
 Configure only:
-==============
+--------------
 ~/RAFT/build$\
- env SRCDIR=$PWD/../raft-config BUILDIR=$PWD PREFIX=usr\
- make -C $BUILDIR -f $SRCDIR/conf.mk conf
+ env BUILDIR=./ PREFIX=/usr ../raft-config/configure
 
 Compile only:
-============
+------------
 ~/RAFT/build$\
- make all
+ make
 
 Installation:
-============
+------------
 ~/RAFT/build$\
  env DESTDIR=$PWD/install make install
 
 Native Build using U2UP (out-of-source-build):
 =============================================
 Do everything (including the u2up package):
-==========================================
+------------------------------------------
 ~$ cd RAFT/build
-~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr -d tmp
+~/RAFT/build$\
+ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p /usr -d install
 
 or wthout having build directory prepared:
 -----------------------------------------
-~/RAFT$ raft-config/u2up/u2up-build.sh -b build raft-config/ -p usr -d build/install
+~/RAFT$\
+ raft-config/u2up/u2up-build.sh -b build raft-config/ -p /usr -d build/install
 
 Configure only:
-==============
-~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr --conf
+--------------
+~/RAFT/build$\
+ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p /usr --conf
 
 Compile only:
-============
-~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr --make
+------------
+~/RAFT/build$\
+ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p /usr --make
 
 Installation:
-============
-~/RAFT/build$ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p usr -d tmp --inst
+------------
+~/RAFT/build$\
+ ../raft-config/u2up/u2up-build.sh -b ./ ../raft-config/ -p /usr -d install --inst
 
 Cleaning:
-========
+--------
 rm -rf ~/RAFT/build
 
 U2UP packaging:
 ==============
-~/RAFT/build$ ./raft_config-0.1.2.u2up [name | version | required | list | extract]
+~/RAFT/build$\
+ ./raft_config-0.1.2.u2up [name | version | required | list | extract]
 

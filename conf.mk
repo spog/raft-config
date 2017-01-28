@@ -6,10 +6,10 @@
 #
 # This file is part of the RAFT-CONFIG software project.
 # This file is provided under the terms of the BSD 3-Clause license,
-# available in the LICENSE file of the "daemonize" software project.
+# available in the LICENSE file of the "raft-config" software project.
 #
 
-include $(SRCDIR)/default.mk
+include $(_SRCDIR_)/default.mk
 TOPDIR := .
 
 SUBDIRS := src
@@ -17,9 +17,9 @@ export SUBDIRS
 
 .PHONY: all
 all:
-	$(SRCDIR)/default.sh subdirs_make all
+	$(_SRCDIR_)/default.sh subdirs_make all
 
 .PHONY: install
 install:
-	$(SRCDIR)/default.sh subdirs_make install
+	$(_SRCDIR_)/default.sh subdirs_make install
 

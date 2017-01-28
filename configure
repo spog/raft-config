@@ -1,0 +1,44 @@
+#!/bin/bash
+#
+# The RAFT-CONFIG project build rules
+#
+# Copyright (C) 2017 Samo Pogacnik <samo_pogacnik@t-2.net>
+# All rights reserved.
+#
+# This file is part of the RAFT-CONFIG software project.
+# This file is provided under the terms of the BSD 3-Clause license,
+# available in the LICENSE file of the "raft-config" software project.
+#
+#set -x
+set -e
+
+if [ "x"$SRCDIR != "x" ];
+then
+	cd $SRCDIR
+	_SRCDIR_=$(pwd)
+	cd - > /dev/null
+else
+	cd $(dirname $(which $0))
+	_SRCDIR_=$(pwd)
+	cd - > /dev/null
+fi
+export _SRCDIR_
+
+mkdir -p $BUILDIR
+cd $BUILDIR
+export _BUILDIR_=$(pwd)
+cd - > /dev/null
+
+if [ "x"$DESTDIR != "x" ];
+then
+	mkdir -p $DESTDIR
+	cd $DESTDIR
+	DESTDIR=$(pwd)
+	cd - > /dev/null
+fi
+export DESTDIR
+
+export PREFIX
+
+make -C $_BUILDIR_ -f $_SRCDIR_/conf.mk conf
+

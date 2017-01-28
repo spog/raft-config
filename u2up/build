@@ -15,10 +15,11 @@ function component_conf()
 {
 	echo "Configuring the project!"
 #set -x
-	export SRCDIR=$comp_source_DIR
-	export BUILDIR=$comp_build_DIR
-	export PREFIX=$prefix_inst_path
-	make -C $BUILDIR -f $SRCDIR/conf.mk conf
+	env BUILDIR=$comp_build_DIR PREFIX=$prefix_inst_path $comp_source_DIR/configure
+#	export SRCDIR=$comp_source_DIR
+#	export BUILDIR=$comp_build_DIR
+#	export PREFIX=$prefix_inst_path
+#	make -C $BUILDIR -f $SRCDIR/conf.mk conf
 #set +x
 }
 

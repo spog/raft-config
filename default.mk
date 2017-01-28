@@ -12,18 +12,20 @@
 SHELL := /bin/bash
 MAKEFILE := Makefile
 CONFFILE := conf.mk
-BUILD_PREFIX := $(BUILDIR)/./$(PREFIX)
-INSTALL_PREFIX := $(DESTDIR)/$(PREFIX)
-export SHELL MAKEFILE CONFFILE BUILD_PREFIX INSTALL_PREFIX
+_BUILD_PREFIX_ := $(_BUILDIR_)/$(PREFIX)
+_INSTALL_PREFIX_ := $(DESTDIR)/$(PREFIX)
+export SHELL MAKEFILE CONFFILE _BUILD_PREFIX_ _INSTALL_PREFIX_
 
 TOPDIR := $(TOPDIR)/$(SUBDIR)
 
-.PHONY: conf
+.PHONY: all
+all:
 
+.PHONY: conf
 conf: $(MAKEFILE)
-	@$(SRCDIR)/default.sh subdirs_conf $(TOPDIR)
+	@$(_SRCDIR_)/default.sh subdirs_conf $(TOPDIR)
 
 $(MAKEFILE):
 	@echo "Generating $(TOPDIR)/$@"
-	@$(SRCDIR)/default.sh generate_makefile $(SUBDIR)
+	@$(_SRCDIR_)/default.sh generate_makefile $(SUBDIR)
 

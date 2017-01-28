@@ -9,16 +9,16 @@
 # available in the LICENSE file of the "daemonize" software project.
 #
 
-include $(SRCDIR)/default.mk
+include $(_SRCDIR_)/default.mk
 
 TARGET := raft-config
-TPATH := $(BUILD_PREFIX)/sbin
-IPATH := $(INSTALL_PREFIX)/sbin
+TPATH := $(_BUILD_PREFIX_)/sbin
+IPATH := $(_INSTALL_PREFIX_)/sbin
 
 .PHONY: all
 all: $(TPATH)/$(TARGET) subdirs_all
 
-$(TPATH)/$(TARGET): $(SRCDIR)/$(SUBPATH)/raft-config.c $(SRCDIR)/$(SUBPATH)/raft-config.h $(TPATH)
+$(TPATH)/$(TARGET): $(_SRCDIR_)/$(SUBPATH)/raft-config.c $(_SRCDIR_)/$(SUBPATH)/raft-config.h $(TPATH)
 	$(CC) -o $@ $(shell pkg-config --cflags --libs libnl-genl-3.0) $<
 
 $(TPATH):
@@ -41,9 +41,9 @@ export SUBDIRS
 
 .PHONY: subdirs_all
 subdirs_all:
-	$(SRCDIR)/default.sh subdirs_make all
+	$(_SRCDIR_)/default.sh subdirs_make all
 
 .PHONY: subdirs_install
 subdirs_install:
-	$(SRCDIR)/default.sh subdirs_make install
+	$(_SRCDIR_)/default.sh subdirs_make install
 
