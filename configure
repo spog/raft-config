@@ -23,21 +23,39 @@ else
 	cd - > /dev/null
 fi
 export _SRCDIR_
+echo "Local source absolute path set: "$_SRCDIR_
 
-mkdir -p $BUILDIR
-cd $BUILDIR
-export _BUILDIR_=$(pwd)
-cd - > /dev/null
-
-if [ "x"$DESTDIR != "x" ];
+if [ "x"$BUILDIR != "x" ];
 then
-	mkdir -p $DESTDIR
-	cd $DESTDIR
-	DESTDIR=$(pwd)
+	mkdir -p $BUILDIR
+	cd $BUILDIR
+	_BUILDIR_=$(pwd)
 	cd - > /dev/null
+else
+	BUILDIR="."
+	_BUILDIR_=$(pwd)
 fi
-export DESTDIR
+export _BUILDIR_
+echo "Local build absolute path set: "$_BUILDIR_
 
+if [ -f $_BUILDIR_/Makefile ];
+then
+	echo "ERROR: Local build path already configured!"
+	exit 1
+fi
+
+if [ "x"$PREFIX == "x" ]
+then
+	PREFIX="/"
+	echo "Target installation path absolute prefix set: "$PREFIX
+else
+	echo "Target installation path absolute prefix set: "$PREFIX
+	if [ "/" != $(echo $PREFIX | sed -e 's%^/.*%/%') ];
+	then
+		echo "ERROR: Target installation path PREFIX is not absolute!"
+		exit 1
+	fi
+fi
 export PREFIX
 
 make -C $_BUILDIR_ -f $_SRCDIR_/conf.mk conf
