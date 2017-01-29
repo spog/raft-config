@@ -31,7 +31,7 @@ $(IPATH):
 	install -d $@
 
 $(IPATH)/$(TARGET):
-	install -s $(TPATH)/$(TARGET) $@
+	install $(TPATH)/$(TARGET) $@
 
 ##
 # Subdirs to handle:
