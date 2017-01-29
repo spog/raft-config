@@ -57,15 +57,21 @@ then
 		exit 0
 		;;
 	list)
+		echo "Content of the U2UP installation package: "\$0
+		echo "Installation path: "\$DESTDIR$PREFIX
 		tar_options="tzv"
 		;;
 	extract)
 		echo "Extracting U2UP installation package: "\$0
-		tar_options="xzv"
+		echo "Installation path: "\$DESTDIR$PREFIX
+		mkdir -p \$DESTDIR$PREFIX
+		tar_options="xzv -C \${DESTDIR}${PREFIX}"
 		;;
 	esac
 else
 	# default is to view content:
+	echo "Content of the U2UP installation package: "\$0
+	echo "Installation path: "\$DESTDIR$PREFIX
 	tar_options="tzv"
 fi
 

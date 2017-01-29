@@ -69,3 +69,8 @@ U2UP packaging:
 ~/RAFT/build$\
  ./raft_config-0.1.2.u2up [name | version | required | list | extract]
 
+Package provides built-in extract PREFIX and you can provide additional DESTDIR:
+-------------------------------------------------------------------------------
+~/RAFT/build$\
+ env DESTDIR=$PWD/tmp ./raft_config-0.1.2.u2up [list | extract]
+

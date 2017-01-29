@@ -15,7 +15,8 @@ function component_conf()
 {
 	echo "Configuring the project!"
 #set -x
-	env BUILDIR=$comp_build_DIR PREFIX=$prefix_inst_path $comp_source_DIR/configure
+	$comp_source_DIR/configure
+#	env BUILDIR=$comp_build_DIR PREFIX=$prefix_inst_path $comp_source_DIR/configure
 #	export SRCDIR=$comp_source_DIR
 #	export BUILDIR=$comp_build_DIR
 #	export PREFIX=$prefix_inst_path

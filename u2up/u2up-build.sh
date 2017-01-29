@@ -23,7 +23,7 @@ export tab="${tab}-"
 pre="${tab}${pro}"
 
 comp_home_dir=""
-comp_build_dir=""
+BUILDIR=""
 comp_repo_dir=""
 inst_dest_dir=""
 comp_clean_build=0
@@ -35,15 +35,16 @@ comp_pack_only=0
 function usage_help ()
 {
 	echo
-	echo -n "Usage: "
-	basename -z $0
-	echo -n " [{--repodir=|-r[=]}REPOSITORY_DIR]"
-	echo -n " [{--buildir=|-b[=]}BUILD_DIR]"
-	echo -n " [--compdir=|-c[=]]COMP_HOME_DIR"
-	echo -n " [{--destdir=|-d[=]}DESTDIR]"
-	echo -n " [--conf] [--make] [--inst] |"
-	echo -n " [{--help|-h}]"
+	echo "Usage: "$(basename -z $0)" OPTIONS"
 	echo
+	echo "OPTIONS:"
+	echo " [{--repodir=|-r[=]}comp_repo_dir]"
+	echo " [{--buildir=|-b[=]}BUILDIR]          Local build path (relative or absolute path)"
+	echo " [{--prefix=|-p[=]}PREFIX]            Target installation path absolute prefix"
+	echo " [{--destdir=|-d[=]}inst_dest_dir]    Local installation path (DESTDIR is set as absolute path)"
+	echo " [--conf] | [--make] | [--inst] |"
+	echo " [--compdir=|-c[=]]comp_home_dir      Local component home path (provides SRCDIR via prepare)"
+	echo " [{--help|-h}]"
 	echo
 #	return
 	exit 1
@@ -76,23 +77,23 @@ do
 		;;
 	-p)
 		shift # past argument
-		prefix_inst_path="${1}"
+		PREFIX="${1}"
 		;;
-	--prefixdir=*|-p=*)
-		prefix_inst_path="${1#*=}"
+	--prefix=*|-p=*)
+		PREFIX="${1#*=}"
 		;;
 	-p*)
-		prefix_inst_path="${1#*p}"
+		PREFIX="${1#*p}"
 		;;
 	-b)
 		shift # past argument
-		comp_build_dir="${1}"
+		BUILDIR="${1}"
 		;;
 	--buildir=*|-b=*)
-		comp_build_dir="${1#*=}"
+		BUILDIR="${1#*=}"
 		;;
 	-b*)
-		comp_build_dir="${1#*b}"
+		BUILDIR="${1#*b}"
 		;;
 	-r)
 		shift # past argument
@@ -143,7 +144,7 @@ do
 	set +e; shift; set -e # to the next token, if any
 done
 #echo "Home dir: "$comp_home_dir
-#echo "Build dir: "$comp_build_dir
+#echo "Build dir: "$BUILDIR
 #echo "Repository dir: "$comp_repo_dir
 
 if [ "x"$comp_home_dir == "x" ]
@@ -241,34 +242,36 @@ then
 	exit 1
 fi
 echo "${pre}Source u2up/prepare script:"
-comp_source_dir=
+SRCDIR=
 . $comp_u2up_DIR/prepare
-if [ "x"$comp_source_dir == "x" ]
+if [ "x"$SRCDIR == "x" ]
 then
 	echo "${pre}ERROR: Internal source directory not set/provided by the component!"
 	exit 1
 else
-	echo "${pre}Component provided internal source dir: "$comp_source_dir
-	cd $comp_source_dir
+	echo "${pre}Component provided internal source dir: "$SRCDIR
+	cd $SRCDIR
 	export comp_source_DIR=$PWD
 	cd - > /dev/null
 fi
+export SRCDIR
 echo "${pre}absolute source dir: "$comp_source_DIR
 
 # Set absolute BUILD directory:
-if [ "x"$comp_build_dir == "x" ]
+if [ "x"$BUILDIR == "x" ]
 then
 	echo "${pre}Using predefined U2UP build location: "$u2up_build_dir
 	comp_build_DIR=$u2up_build_dir/$comp_home_NAME
 	mkdir -p $comp_build_DIR
 	cd $comp_build_DIR
 else
-	echo "${pre}Using specified U2UP build dir: "$comp_build_dir
-	mkdir -p $comp_build_dir
-	cd $comp_build_dir
+	echo "${pre}Using specified U2UP build dir: "$BUILDIR
+	mkdir -p $BUILDIR
+	cd $BUILDIR
 	comp_build_DIR=$PWD
 	export comp_build_DIR
 fi
+export BUILDIR
 echo "${pre}absolute build dir: "$comp_build_DIR
 
 if [ "x"$comp_repo_dir == "x" ]
@@ -297,20 +300,23 @@ then
 	echo "${pre}ERROR: Missing the u2up/build file!"
 	exit 1
 fi
-#???Should this be an option too???
-#comp_install_DIR=$comp_build_DIR/install
 
-if [ "x"$prefix_inst_path == "x" ]
+if [ "x"$PREFIX == "x" ]
 then
-	echo "${pre}ERROR: Relative prefix installation path not set/provided by the component!"
+	echo "${pre}ERROR: Target installation path absolute PREFIX not set/provided by the component!"
 	exit 1
 else
-	echo "${pre}Component provided relative prefix installation path: "$prefix_inst_path
-	mkdir -p $comp_build_DIR/$prefix_inst_path
-	cd $comp_build_DIR/$prefix_inst_path
+	echo "${pre}Target installation path absolute prefix set: "$PREFIX
+	if [ "/" != $(echo $PREFIX | sed -e 's%^/.*%/%') ];
+	then
+		echo "${pre}ERROR: Target installation path PREFIX is not absolute!"
+		exit 1
+	fi
+	mkdir -p $comp_build_DIR$PREFIX
+	cd $comp_build_DIR$PREFIX
 	prefix_inst_PATH=$PWD
 	cd - > /dev/null
-	export prefix_inst_path
+	export PREFIX
 fi
 echo "${pre}absolute build prefix installation dir: "$prefix_inst_PATH
 
@@ -337,11 +343,11 @@ else
 	echo "${pre}Component provided internal installation dir: "$inst_dest_dir
 	mkdir -p $inst_dest_dir
 	cd $inst_dest_dir
-	comp_install_DIR=$PWD
+	DESTDIR=$PWD
 	cd - > /dev/null
-	export DESTDIR=$comp_install_DIR
+	export DESTDIR
 fi
-echo "${pre}absolute internal installation dir: "$comp_install_DIR
+echo "${pre}absolute internal installation dir: "$DESTDIR
 
 if [ $comp_inst_only -eq 1 ]
 then
@@ -385,10 +391,10 @@ do
 					exit 1
 					;;
 				esac
+#set -x
 				subsubst="COMP_PACKAGE_${package_name}_${package_type}[@]"
 				echo "${pre}package \""$comp_package_name"\" content: "${!subsubst}
-#set -x
-				cd $comp_install_DIR
+				cd $prefix_inst_PATH
 				tar czvf $comp_build_DIR/files.tgz ${!subsubst}
 				cd - > /dev/null
 				cd $comp_build_DIR

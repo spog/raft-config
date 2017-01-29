@@ -9,4 +9,4 @@
 # available in the LICENSE file of the "daemonize" software project.
 #
 
-comp_source_dir=$comp_home_DIR
+SRCDIR=$comp_home_DIR
