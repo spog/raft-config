@@ -78,6 +78,6 @@ struct raft_node_params {
 	unsigned long clusterid_value;
 };
 
-int raft_config_request(void);
+int raft_config_request(struct raft_config_req *cfg_req);
 
 #endif /*__raft_config_h__*/

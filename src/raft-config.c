@@ -42,7 +42,7 @@ unsigned int evmlog_add_header = 0;
 static void usage_help(char *argv[])
 {
 	printf("Usage:\n");
-	printf("\t%s [options] object [command]\n", argv[0]);
+	printf("\t%s [options] object [command] [params]\n", argv[0]);
 	printf("options:\n");
 	printf("\t-q, --quiet              Disable all output.\n");
 	printf("\t-v, --verbose            Enable verbose output.\n");
@@ -55,6 +55,10 @@ static void usage_help(char *argv[])
 	printf("\t-s, --syslog             Enable syslog output (instead of stdout, stderr).\n");
 	printf("\t-n, --no-header          No EVMLOG header added to every evm_log_... output.\n");
 	printf("\t-h, --help               Displays this text.\n");
+	printf("\nobject: cluster | domain | node\n");
+	printf("\ncommand: add | del | show | set\n");
+	printf("\nparams: depend on object and command pair\n");
+	printf("\n");
 }
 
 static const char *object_str[] = {
@@ -64,9 +68,12 @@ static const char *object_str[] = {
 	RAFT_OBJ_NODE_STR,
 };
 
-static const char *cluster_param_str[] = {
-	RAFT_PAR_CLUSTER_UNSPEC_STR,
-	RAFT_PAR_CLUSTER_ID_STR,
+static const char *command_str[] = {
+	RAFT_CFG_CMD_UNSPEC_STR,
+	RAFT_CFG_CMD_ADD_STR,
+	RAFT_CFG_CMD_DEL_STR,
+	RAFT_CFG_CMD_SET_STR,
+	RAFT_CFG_CMD_SHOW_STR,
 };
 
 static int parse_param_value_ul(char *str, unsigned long *val)
@@ -91,6 +98,11 @@ static int parse_param_value_ul(char *str, unsigned long *val)
 
 	return 0;
 }
+
+static const char *cluster_param_str[] = {
+	RAFT_PAR_CLUSTER_UNSPEC_STR,
+	RAFT_PAR_CLUSTER_ID_STR,
+};
 
 /* Params follow the "name value" pattern! */
 static int parse_cluster_params(struct raft_config_req *cfg_req, int *optind, int argc, char *argv[])
@@ -130,6 +142,11 @@ static int parse_cluster_params(struct raft_config_req *cfg_req, int *optind, in
 		}
 		(*optind)++;
 	}
+	if (cluster_params.id_value == 0) {
+		evm_log_error("Missing cluster id!\n");
+		exit(EXIT_FAILURE);
+	}
+	cfg_req->command_params = (void *)&cluster_params;
 	return 0;
 }
 
@@ -148,6 +165,7 @@ static int parse_domain_params(struct raft_config_req *cfg_req, int *optind, int
 	static struct raft_domain_params domain_params = {
 		.param_type = RAFT_NLA_DOMAIN_UNSPEC,
 		.id_value = 0,
+		.clusterid_value = 0,
 	};
 
 	while (*optind < argc) {
@@ -204,6 +222,15 @@ static int parse_domain_params(struct raft_config_req *cfg_req, int *optind, int
 		}
 		(*optind)++;
 	}
+	if (domain_params.id_value == 0) {
+		evm_log_error("Missing domain id!\n");
+		exit(EXIT_FAILURE);
+	}
+	if (domain_params.clusterid_value == 0) {
+		evm_log_error("Missing clusterid!\n");
+		exit(EXIT_FAILURE);
+	}
+	cfg_req->command_params = (void *)&domain_params;
 	return 0;
 }
 
@@ -221,6 +248,8 @@ static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int a
 	static struct raft_node_params node_params = {
 		.param_type = RAFT_NLA_NODE_UNSPEC,
 		.id_value = 0,
+		.domainid_value = 0,
+		.clusterid_value = 0,
 	};
 
 	while (*optind < argc) {
@@ -271,14 +300,27 @@ static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int a
 		}
 		(*optind)++;
 	}
+	if (node_params.id_value == 0) {
+		evm_log_error("Missing node id!\n");
+		exit(EXIT_FAILURE);
+	}
+	if (node_params.domainid_value == 0) {
+		evm_log_error("Missing domainid!\n");
+		exit(EXIT_FAILURE);
+	}
+	if (node_params.clusterid_value == 0) {
+		evm_log_error("Missing clusterid!\n");
+		exit(EXIT_FAILURE);
+	}
+	cfg_req->command_params = (void *)&node_params;
 	return 0;
 }
 
-static int usage_check(int argc, char *argv[])
+static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 {
 	int c;
 	int ret = 0;
-	struct raft_config_req cfg_req = {
+	static struct raft_config_req cfg_req = {
 		.object_type = RAFT_NLA_UNSPEC,
 		.command_action = RAFT_CFG_CMD_UNSPEC,
 		.command_params = NULL,
@@ -387,29 +429,30 @@ static int usage_check(int argc, char *argv[])
 		if (optind < argc) {
 			evm_log_debug("Parsing expected command action string: %s\n", argv[optind]);
 			for (i = RAFT_CFG_CMD_UNSPEC; i <= RAFT_CFG_CMD_MAX; i++) {
-				if (strstr(object_str[i], argv[optind]) == object_str[i]) {
-					cfg_req.object_type = i;
+				if (strstr(command_str[i], argv[optind]) == command_str[i]) {
+					cfg_req.command_action = i;
 					break;
 				}
 			}
-			if (cfg_req.object_type == RAFT_CFG_CMD_UNSPEC) {
+			if (cfg_req.command_action == RAFT_CFG_CMD_UNSPEC) {
 				evm_log_error("Unknown command action: %s!\n", argv[optind]);
 				exit(EXIT_FAILURE);
 			}
 		}
 		optind++;
-		if (optind < argc) {
-			switch (cfg_req.object_type) {
-			case RAFT_NLA_CLUSTER:
-				ret = parse_cluster_params(&cfg_req, &optind, argc, argv);
-				break;
-			case RAFT_NLA_DOMAIN:
-				ret = parse_domain_params(&cfg_req, &optind, argc, argv);
-				break;
-			case RAFT_NLA_NODE:
-				ret = parse_node_params(&cfg_req, &optind, argc, argv);
-				break;
-			};
+		switch (cfg_req.object_type) {
+		case RAFT_NLA_CLUSTER:
+			ret = parse_cluster_params(&cfg_req, &optind, argc, argv);
+			break;
+		case RAFT_NLA_DOMAIN:
+			ret = parse_domain_params(&cfg_req, &optind, argc, argv);
+			break;
+		case RAFT_NLA_NODE:
+			ret = parse_node_params(&cfg_req, &optind, argc, argv);
+			break;
+		default:
+			evm_log_error("Missing command parameters!\n");
+			exit(EXIT_FAILURE);
 		}
 		if (optind < argc) {
 			printf("Unknown ARGV-elements: ");
@@ -420,14 +463,20 @@ static int usage_check(int argc, char *argv[])
 		}
 	}
 
+	if (req != NULL)
+		*req = &cfg_req;
+
 	return ret;
 }
 
 int main(int argc, char *argv[])
 {
-	usage_check(argc, argv);
+	struct raft_config_req *raft_cfg_req = NULL;
 
-	if (raft_config_request() < 0)
+	usage_check(argc, argv, &raft_cfg_req);
+
+	evm_log_debug("raft_cfg_req=%p\n", raft_cfg_req);
+	if (raft_config_request(raft_cfg_req) < 0)
 		exit(EXIT_FAILURE);
 
 	exit(EXIT_SUCCESS);
@@ -464,12 +513,14 @@ static int recv_msg(struct nl_msg *msg, void *arg)
 	return 0;
 }
 
-int raft_config_request(void)
+int raft_config_request(struct raft_config_req *cfg_req)
 {
 	int family_id;
 	int family;
 	int ret;
 	int err = 1;
+	int nl_cmd;
+	int nl_flags;
 
 //	struct rtgenmsg rt_hdr = { .rtgen_family = AF_PACKET, };
 	struct nl_msg *msg;
@@ -478,7 +529,7 @@ int raft_config_request(void)
 	// Open socket to kernel.
 	struct nl_sock *socket = nl_socket_alloc();  // Allocate new netlink socket in memory.
 	if (!socket) {
-		fprintf(stderr, "Failed to allocate netlink socket.\n");
+		evm_log_error("Failed to allocate netlink socket.\n");
 		return -ENOMEM;
 	}
 
@@ -487,7 +538,7 @@ int raft_config_request(void)
 
 	msg = nlmsg_alloc();
 	if (!msg) {
-		fprintf(stderr, "Failed to allocate netlink message.\n");
+		evm_log_error("Failed to allocate netlink message.\n");
 		return -ENOMEM;
 	}
 #if 0
@@ -500,9 +551,83 @@ int raft_config_request(void)
 	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, list_interface_handler, NULL);
 #endif
 
-	printf("i am raft-config (family=%d)!\n", family);
+	evm_log_debug("i am raft-config (family=%d)!\n", family);
 
-	genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, NLM_F_REQUEST, RAFT_NL_CLUSTER_ADD, 0);
+	switch (cfg_req->object_type) {
+	case RAFT_NLA_CLUSTER:
+		switch (cfg_req->command_action) {
+		case RAFT_CFG_CMD_ADD:
+			nl_cmd = RAFT_NL_CLUSTER_ADD;
+			nl_flags = NLM_F_REQUEST;
+			break;
+		case RAFT_CFG_CMD_DEL:
+			nl_cmd = RAFT_NL_CLUSTER_DEL;
+			nl_flags = NLM_F_REQUEST;
+			break;
+		case RAFT_CFG_CMD_SET:
+			nl_cmd = RAFT_NL_CLUSTER_SET;
+			nl_flags = NLM_F_REQUEST;
+			break;
+		case RAFT_CFG_CMD_SHOW:
+			nl_cmd = RAFT_NL_CLUSTER_SHOW;
+			nl_flags = NLM_F_DUMP;
+			break;
+		default:
+			evm_log_error("Command not defined!\n");
+			exit(EXIT_FAILURE);
+		}
+		break;
+	case RAFT_NLA_DOMAIN:
+		switch (cfg_req->command_action) {
+		case RAFT_CFG_CMD_ADD:
+			nl_cmd = RAFT_NL_DOMAIN_ADD;
+			nl_flags = NLM_F_REQUEST;
+			break;
+		case RAFT_CFG_CMD_DEL:
+			nl_cmd = RAFT_NL_DOMAIN_DEL;
+			nl_flags = NLM_F_REQUEST;
+			break;
+		case RAFT_CFG_CMD_SET:
+			nl_cmd = RAFT_NL_DOMAIN_SET;
+			nl_flags = NLM_F_REQUEST;
+			break;
+		case RAFT_CFG_CMD_SHOW:
+			nl_cmd = RAFT_NL_DOMAIN_SHOW;
+			nl_flags = NLM_F_DUMP;
+			break;
+		default:
+			evm_log_error("Command not defined!\n");
+			exit(EXIT_FAILURE);
+		}
+		break;
+	case RAFT_NLA_NODE:
+		switch (cfg_req->command_action) {
+		case RAFT_CFG_CMD_ADD:
+			nl_cmd = RAFT_NL_NODE_ADD;
+			nl_flags = NLM_F_REQUEST;
+			break;
+		case RAFT_CFG_CMD_DEL:
+			nl_cmd = RAFT_NL_NODE_DEL;
+			nl_flags = NLM_F_REQUEST;
+			break;
+		case RAFT_CFG_CMD_SET:
+			nl_cmd = RAFT_NL_NODE_SET;
+			nl_flags = NLM_F_REQUEST;
+			break;
+		case RAFT_CFG_CMD_SHOW:
+			nl_cmd = RAFT_NL_NODE_SHOW;
+			nl_flags = NLM_F_DUMP;
+			break;
+		default:
+			evm_log_error("Command not defined!\n");
+			exit(EXIT_FAILURE);
+		}
+		break;
+	default:
+		evm_log_error("Object not defined!\n");
+		exit(EXIT_FAILURE);
+	}
+	genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 	nl_send_auto_complete(socket, msg);
 	nlmsg_free(msg);
 
@@ -510,7 +635,7 @@ int raft_config_request(void)
 
 	/* set the callback function to receive answers to recv_msg */
 	if (nl_socket_modify_cb(socket, NL_CB_MSG_IN, NL_CB_CUSTOM, recv_msg, &err) < 0) {
-		printf("error setting callback function\n");
+		evm_log_error("error setting callback function\n");
 		
 		goto out;
 	}
