@@ -42,15 +42,25 @@ static const unsigned int evmlog_module_value = value;\
 #define _5DIGIT_SECS(timespec_x) (timespec_x.tv_sec % 100000)
 #define _6DIGIT_USECS(timespec_x) (timespec_x.tv_nsec / 1000)
 
+#if 0
 #define EVMLOG_WITH_HEADER_DEBUG_FORMAT "[%05ld.%06ld|%d|%s] %s:%d %s(): "
 #define EVMLOG_WITH_HEADER_DEBUG_ARGS _5DIGIT_SECS(ts), _6DIGIT_USECS(ts), (int)syscall(SYS_gettid), evmlog_module_name, __FILE__, __LINE__, __FUNCTION__
+#else
+#define EVMLOG_WITH_HEADER_DEBUG_FORMAT "[%05ld.%06ld|%d|%s] %s(): "
+#define EVMLOG_WITH_HEADER_DEBUG_ARGS _5DIGIT_SECS(ts), _6DIGIT_USECS(ts), (int)syscall(SYS_gettid), evmlog_module_name, __FUNCTION__
+#endif
 #define EVMLOG_WITH_HEADER_TRACE_FORMAT "[%05ld.%06ld|%d|%s] %s(): "
 #define EVMLOG_WITH_HEADER_TRACE_ARGS _5DIGIT_SECS(ts), _6DIGIT_USECS(ts), (int)syscall(SYS_gettid), evmlog_module_name, __FUNCTION__
 #define EVMLOG_WITH_HEADER_NORMAL_FORMAT "[%05ld.%06ld|%d|%s] "
 #define EVMLOG_WITH_HEADER_NORMAL_ARGS _5DIGIT_SECS(ts), _6DIGIT_USECS(ts), (int)syscall(SYS_gettid), evmlog_module_name
 
+#if 0
 #define EVMLOG_NO_HEADER_DEBUG_FORMAT "%s:%d %s(): "
 #define EVMLOG_NO_HEADER_DEBUG_ARGS __FILE__, __LINE__, __FUNCTION__
+#else
+#define EVMLOG_NO_HEADER_DEBUG_FORMAT "%s(): "
+#define EVMLOG_NO_HEADER_DEBUG_ARGS __FUNCTION__
+#endif
 #define EVMLOG_NO_HEADER_TRACE_FORMAT "%s(): "
 #define EVMLOG_NO_HEADER_TRACE_ARGS __FUNCTION__
 #define EVMLOG_NO_HEADER_NORMAL_FORMAT "%s"

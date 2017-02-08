@@ -27,13 +27,17 @@
 /*
  * The MAIN part.
  */
+EVMLOG_MODULE_INIT(RAFT_CONFIG, 1);
+#define EVMLOG_MODULE_DEBUG 1
+#define EVMLOG_MODULE_TRACE 1
+
 unsigned int log_mask;
 unsigned int evmlog_normal = 1;
 unsigned int evmlog_verbose = 0;
 unsigned int evmlog_trace = 0;
 unsigned int evmlog_debug = 0;
 unsigned int evmlog_use_syslog = 0;
-unsigned int evmlog_add_header = 1;
+unsigned int evmlog_add_header = 0;
 
 static void usage_help(char *argv[])
 {
@@ -65,23 +69,23 @@ static const char *cluster_param_str[] = {
 	RAFT_PAR_CLUSTER_ID_STR,
 };
 
-static int parse_cluster_param_value_id(char *str, unsigned long *val)
+static int parse_param_value_ul(char *str, unsigned long *val)
 {
 	char *endptr;
 
 	if (str == NULL) return -1;
 	if (val == NULL) return -1;
 
-	*val = strtol(str, &endptr, 10);
+	*val = strtoul(str, &endptr, 10);
 
 	/* Check for various possible errors */
-	if ((errno == ERANGE && (*val == LONG_MAX || *val == LONG_MIN))
+	if ((errno == ERANGE && (*val == ULONG_MAX))
 	 || (errno != 0 && *val == 0)) {
 		perror("strtol");
 		return -1;
 	}
 	if ((*str == '\0') || (*endptr != '\0')) {
-		fprintf(stderr, "Invalid digits were found\n");
+		evm_log_error("Invalid digits were found\n");
 		return -1;
 	}
 
@@ -98,7 +102,8 @@ static int parse_cluster_params(struct raft_config_req *cfg_req, int *optind, in
 
 	while (*optind < argc) {
 		int i;
-		printf("Parsing expected cluster param name: %s\n", argv[*optind]);
+		evm_log_debug("Parsing expected cluster param name: %s\n", argv[*optind]);
+		cluster_params.param_type = RAFT_NLA_CLUSTER_UNSPEC;
 		for (i = RAFT_NLA_CLUSTER_UNSPEC; i <= RAFT_NLA_CLUSTER_MAX; i++) {
 			if (strstr(cluster_param_str[i], argv[*optind]) == cluster_param_str[i]) {
 				cluster_params.param_type = i;
@@ -107,19 +112,20 @@ static int parse_cluster_params(struct raft_config_req *cfg_req, int *optind, in
 		}
 		(*optind)++;
 		if (*optind >= argc) {
-			printf("Missing parameter value!\n");
+			evm_log_error("Missing cluster parameter value!\n");
 			exit(EXIT_FAILURE);
 		}
-		printf("Parsing expected cluster param value: %s\n", argv[*optind]);
+		evm_log_debug("Parsing expected cluster param value: %s\n", argv[*optind]);
 		switch (cluster_params.param_type) {
 		case RAFT_NLA_CLUSTER_ID:
-			if (parse_cluster_param_value_id(argv[*optind], &cluster_params.id_value) < 0) {
+			if (parse_param_value_ul(argv[*optind], &cluster_params.id_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
+			evm_log_debug("Parsed expected cluster id value: %lu\n", cluster_params.id_value);
 			break;
 		case RAFT_NLA_CLUSTER_UNSPEC:
 		default:
-			printf("Unknown parameter required!\n");
+			evm_log_error("Unknown parameter: %s!\n", argv[*optind]);
 			exit(EXIT_FAILURE);
 		}
 		(*optind)++;
@@ -127,15 +133,144 @@ static int parse_cluster_params(struct raft_config_req *cfg_req, int *optind, in
 	return 0;
 }
 
+static const char *domain_param_str[] = {
+	RAFT_PAR_DOMAIN_UNSPEC_STR,
+	RAFT_PAR_DOMAIN_ID_STR,
+	RAFT_PAR_DOMAIN_HEARTBEAT_STR,
+	RAFT_PAR_DOMAIN_ELECTION_STR,
+	RAFT_PAR_DOMAIN_MAXNODES_STR,
+	RAFT_PAR_DOMAIN_CLUSTERID_STR,
+};
+
 /* Params follow the "name value" pattern! */
 static int parse_domain_params(struct raft_config_req *cfg_req, int *optind, int argc, char *argv[])
 {
+	static struct raft_domain_params domain_params = {
+		.param_type = RAFT_NLA_DOMAIN_UNSPEC,
+		.id_value = 0,
+	};
+
+	while (*optind < argc) {
+		int i;
+		evm_log_debug("Parsing expected domain param name: %s\n", argv[*optind]);
+		domain_params.param_type = RAFT_NLA_DOMAIN_UNSPEC;
+		for (i = RAFT_NLA_DOMAIN_UNSPEC; i <= RAFT_NLA_DOMAIN_MAX; i++) {
+			if (strstr(domain_param_str[i], argv[*optind]) == domain_param_str[i]) {
+				domain_params.param_type = i;
+				break;
+			}
+		}
+		(*optind)++;
+		if (*optind >= argc) {
+			evm_log_error("Missing domain parameter value!\n");
+			exit(EXIT_FAILURE);
+		}
+		evm_log_debug("Parsing expected domain param value: %s\n", argv[*optind]);
+		switch (domain_params.param_type) {
+		case RAFT_NLA_DOMAIN_ID:
+			if (parse_param_value_ul(argv[*optind], &domain_params.id_value) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected domain id value: %lu\n", domain_params.id_value);
+			break;
+		case RAFT_NLA_DOMAIN_HEARTBEAT:
+			if (parse_param_value_ul(argv[*optind], &domain_params.heartbeat_value) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected domain heartbeat value: %lu\n", domain_params.heartbeat_value);
+			break;
+		case RAFT_NLA_DOMAIN_ELECTION:
+			if (parse_param_value_ul(argv[*optind], &domain_params.election_value) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected domain election value: %lu\n", domain_params.election_value);
+			break;
+		case RAFT_NLA_DOMAIN_MAXNODES:
+			if (parse_param_value_ul(argv[*optind], &domain_params.maxnodes_value) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected domain maxnodes value: %lu\n", domain_params.maxnodes_value);
+			break;
+		case RAFT_NLA_DOMAIN_CLUSTERID:
+			if (parse_param_value_ul(argv[*optind], &domain_params.clusterid_value) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected domain clusterid value: %lu\n", domain_params.clusterid_value);
+			break;
+		case RAFT_NLA_DOMAIN_UNSPEC:
+		default:
+			evm_log_error("Unknown domain parameter: %s!\n", argv[*optind]);
+			exit(EXIT_FAILURE);
+		}
+		(*optind)++;
+	}
 	return 0;
 }
+
+static const char *node_param_str[] = {
+	RAFT_PAR_NODE_UNSPEC_STR,
+	RAFT_PAR_NODE_ID_STR,
+	RAFT_PAR_NODE_CONTACT_STR,
+	RAFT_PAR_NODE_DOMAINID_STR,
+	RAFT_PAR_NODE_CLUSTERID_STR,
+};
 
 /* Params follow the "name value" pattern! */
 static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int argc, char *argv[])
 {
+	static struct raft_node_params node_params = {
+		.param_type = RAFT_NLA_NODE_UNSPEC,
+		.id_value = 0,
+	};
+
+	while (*optind < argc) {
+		int i;
+		evm_log_debug("Parsing expected node param name: %s\n", argv[*optind]);
+		node_params.param_type = RAFT_NLA_NODE_UNSPEC;
+		for (i = RAFT_NLA_NODE_UNSPEC; i <= RAFT_NLA_NODE_MAX; i++) {
+			if (strstr(node_param_str[i], argv[*optind]) == node_param_str[i]) {
+				node_params.param_type = i;
+				break;
+			}
+		}
+		(*optind)++;
+		if (*optind >= argc) {
+			evm_log_error("Missing node parameter value!\n");
+			exit(EXIT_FAILURE);
+		}
+		evm_log_debug("Parsing expected node param value: %s\n", argv[*optind]);
+		switch (node_params.param_type) {
+		case RAFT_NLA_NODE_ID:
+			if (parse_param_value_ul(argv[*optind], &node_params.id_value) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected node id value: %lu\n", node_params.id_value);
+			break;
+		case RAFT_NLA_NODE_CONTACT:
+			if (parse_param_value_ul(argv[*optind], &node_params.contact_value) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected node contact value: %lu\n", node_params.contact_value);
+			break;
+		case RAFT_NLA_NODE_DOMAINID:
+			if (parse_param_value_ul(argv[*optind], &node_params.domainid_value) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected node domainid value: %lu\n", node_params.domainid_value);
+			break;
+		case RAFT_NLA_NODE_CLUSTERID:
+			if (parse_param_value_ul(argv[*optind], &node_params.clusterid_value) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected node clusterid value: %lu\n", node_params.clusterid_value);
+			break;
+		case RAFT_NLA_NODE_UNSPEC:
+		default:
+			evm_log_error("Unknown node parameter: %s!\n", argv[*optind]);
+			exit(EXIT_FAILURE);
+		}
+		(*optind)++;
+	}
 	return 0;
 }
 
@@ -221,9 +356,23 @@ static int usage_check(int argc, char *argv[])
 		}
 	}
 
+	log_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) | LOG_MASK(LOG_ERR);
+
+	/* Setup LOG_MASK according to startup arguments! */
+	if (evmlog_normal) {
+		log_mask |= LOG_MASK(LOG_WARNING);
+		log_mask |= LOG_MASK(LOG_NOTICE);
+	}
+	if ((evmlog_verbose) || (evmlog_trace))
+		log_mask |= LOG_MASK(LOG_INFO);
+	if (evmlog_debug)
+		log_mask |= LOG_MASK(LOG_DEBUG);
+
+	setlogmask(log_mask);
+
 	if (optind < argc) {
 		int i;
-		printf("Parsing expected object string: %s\n", argv[optind]);
+		evm_log_debug("Parsing expected object string: %s\n", argv[optind]);
 		for (i = RAFT_NLA_UNSPEC; i <= RAFT_NLA_MAX; i++) {
 			if (strstr(object_str[i], argv[optind]) == object_str[i]) {
 				cfg_req.object_type = i;
@@ -231,12 +380,12 @@ static int usage_check(int argc, char *argv[])
 			}
 		}
 		if (cfg_req.object_type == RAFT_NLA_UNSPEC) {
-			printf("Unknown object required!\n");
+			evm_log_error("Unknown object: %s!\n", argv[optind]);
 			exit(EXIT_FAILURE);
 		}
 		optind++;
 		if (optind < argc) {
-			printf("Parsing expected command action string: %s\n", argv[optind]);
+			evm_log_debug("Parsing expected command action string: %s\n", argv[optind]);
 			for (i = RAFT_CFG_CMD_UNSPEC; i <= RAFT_CFG_CMD_MAX; i++) {
 				if (strstr(object_str[i], argv[optind]) == object_str[i]) {
 					cfg_req.object_type = i;
@@ -244,7 +393,7 @@ static int usage_check(int argc, char *argv[])
 				}
 			}
 			if (cfg_req.object_type == RAFT_CFG_CMD_UNSPEC) {
-				printf("Unknown command action required!\n");
+				evm_log_error("Unknown command action: %s!\n", argv[optind]);
 				exit(EXIT_FAILURE);
 			}
 		}
@@ -277,20 +426,6 @@ static int usage_check(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 	usage_check(argc, argv);
-
-	log_mask = LOG_MASK(LOG_EMERG) | LOG_MASK(LOG_ALERT) | LOG_MASK(LOG_CRIT) | LOG_MASK(LOG_ERR);
-
-	/* Setup LOG_MASK according to startup arguments! */
-	if (evmlog_normal) {
-		log_mask |= LOG_MASK(LOG_WARNING);
-		log_mask |= LOG_MASK(LOG_NOTICE);
-	}
-	if ((evmlog_verbose) || (evmlog_trace))
-		log_mask |= LOG_MASK(LOG_INFO);
-	if (evmlog_debug)
-		log_mask |= LOG_MASK(LOG_DEBUG);
-
-	setlogmask(log_mask);
 
 	if (raft_config_request() < 0)
 		exit(EXIT_FAILURE);

@@ -48,10 +48,34 @@ struct raft_cluster_params {
 	unsigned long id_value;
 };
 
+#define RAFT_PAR_DOMAIN_UNSPEC_STR ""
+#define RAFT_PAR_DOMAIN_ID_STR "id"
+#define RAFT_PAR_DOMAIN_HEARTBEAT_STR "heartbeat"
+#define RAFT_PAR_DOMAIN_ELECTION_STR "election"
+#define RAFT_PAR_DOMAIN_MAXNODES_STR "maxnodes"
+#define RAFT_PAR_DOMAIN_CLUSTERID_STR "clusterid"
+
 struct raft_domain_params {
+	int param_type;
+	unsigned long id_value;
+	unsigned long heartbeat_value;
+	unsigned long election_value;
+	unsigned long maxnodes_value;
+	unsigned long clusterid_value;
 };
 
+#define RAFT_PAR_NODE_UNSPEC_STR ""
+#define RAFT_PAR_NODE_ID_STR "id"
+#define RAFT_PAR_NODE_CONTACT_STR "contact"
+#define RAFT_PAR_NODE_DOMAINID_STR "domainid"
+#define RAFT_PAR_NODE_CLUSTERID_STR "clusterid"
+
 struct raft_node_params {
+	int param_type;
+	unsigned long id_value;
+	unsigned long contact_value;
+	unsigned long domainid_value;
+	unsigned long clusterid_value;
 };
 
 int raft_config_request(void);
