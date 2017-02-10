@@ -42,22 +42,32 @@ unsigned int evmlog_add_header = 0;
 static void usage_help(char *argv[])
 {
 	printf("Usage:\n");
-	printf("\t%s [options] object [command] [params]\n", argv[0]);
-	printf("options:\n");
+	printf("\t%s [OPTIONS] OBJECT ObjectID COMMAND [PARAMS]\n", argv[0]);
+	printf("OPTIONS:\n");
+#if 0
 	printf("\t-q, --quiet              Disable all output.\n");
 	printf("\t-v, --verbose            Enable verbose output.\n");
 #if (EVMLOG_MODULE_TRACE != 0)
 	printf("\t-t, --trace              Enable trace output.\n");
 #endif
+#endif
 #if (EVMLOG_MODULE_DEBUG != 0)
 	printf("\t-g, --debug              Enable debug output.\n");
 #endif
+#if 0
 	printf("\t-s, --syslog             Enable syslog output (instead of stdout, stderr).\n");
 	printf("\t-n, --no-header          No EVMLOG header added to every evm_log_... output.\n");
+#endif
 	printf("\t-h, --help               Displays this text.\n");
-	printf("\nobject: cluster | domain | node\n");
-	printf("\ncommand: add | del | show | set\n");
-	printf("\nparams: depend on object and command pair\n");
+	printf("\nWhere OBJECT := { cluster | domain | node }\n");
+	printf("\tObjectID := value\n");
+	printf("\nCOMMAND := { add | del | show | set }\n");
+	printf("\nWhen OBJECT := cluster\n");
+	printf("\tPARAMS := { }\n");
+	printf("\nWhen OBJECT := domain\n");
+	printf("\tPARAMS := { clusterid value [ heartbeat value ] [ election value ] [ maxnodes value ] }\n");
+	printf("\nWhen OBJECT := node\n");
+	printf("\tPARAMS := { clusterid value domainid value [ contact value ] }\n");
 	printf("\n");
 }
 
@@ -112,6 +122,9 @@ static int parse_cluster_params(struct raft_config_req *cfg_req, int *optind, in
 		.id_value = 0,
 	};
 
+	if (cfg_req) {
+		cluster_params.id_value = cfg_req->object_id;
+	}
 	while (*optind < argc) {
 		int i;
 		evm_log_debug("Parsing expected cluster param name: %s\n", argv[*optind]);
@@ -129,12 +142,6 @@ static int parse_cluster_params(struct raft_config_req *cfg_req, int *optind, in
 		}
 		evm_log_debug("Parsing expected cluster param value: %s\n", argv[*optind]);
 		switch (cluster_params.param_type) {
-		case RAFT_NLA_CLUSTER_ID:
-			if (parse_param_value_ul(argv[*optind], &cluster_params.id_value) < 0) {
-				exit(EXIT_FAILURE);
-			}
-			evm_log_debug("Parsed expected cluster id value: %lu\n", cluster_params.id_value);
-			break;
 		case RAFT_NLA_CLUSTER_UNSPEC:
 		default:
 			evm_log_error("Unknown parameter: %s!\n", argv[*optind]);
@@ -168,6 +175,9 @@ static int parse_domain_params(struct raft_config_req *cfg_req, int *optind, int
 		.clusterid_value = 0,
 	};
 
+	if (cfg_req) {
+		domain_params.id_value = cfg_req->object_id;
+	}
 	while (*optind < argc) {
 		int i;
 		evm_log_debug("Parsing expected domain param name: %s\n", argv[*optind]);
@@ -185,12 +195,6 @@ static int parse_domain_params(struct raft_config_req *cfg_req, int *optind, int
 		}
 		evm_log_debug("Parsing expected domain param value: %s\n", argv[*optind]);
 		switch (domain_params.param_type) {
-		case RAFT_NLA_DOMAIN_ID:
-			if (parse_param_value_ul(argv[*optind], &domain_params.id_value) < 0) {
-				exit(EXIT_FAILURE);
-			}
-			evm_log_debug("Parsed expected domain id value: %lu\n", domain_params.id_value);
-			break;
 		case RAFT_NLA_DOMAIN_HEARTBEAT:
 			if (parse_param_value_ul(argv[*optind], &domain_params.heartbeat_value) < 0) {
 				exit(EXIT_FAILURE);
@@ -252,6 +256,9 @@ static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int a
 		.clusterid_value = 0,
 	};
 
+	if (cfg_req) {
+		node_params.id_value = cfg_req->object_id;
+	}
 	while (*optind < argc) {
 		int i;
 		evm_log_debug("Parsing expected node param name: %s\n", argv[*optind]);
@@ -269,12 +276,6 @@ static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int a
 		}
 		evm_log_debug("Parsing expected node param value: %s\n", argv[*optind]);
 		switch (node_params.param_type) {
-		case RAFT_NLA_NODE_ID:
-			if (parse_param_value_ul(argv[*optind], &node_params.id_value) < 0) {
-				exit(EXIT_FAILURE);
-			}
-			evm_log_debug("Parsed expected node id value: %lu\n", node_params.id_value);
-			break;
 		case RAFT_NLA_NODE_CONTACT:
 			if (parse_param_value_ul(argv[*optind], &node_params.contact_value) < 0) {
 				exit(EXIT_FAILURE);
@@ -329,20 +330,25 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 	while (1) {
 		int option_index = 0;
 		static struct option long_options[] = {
+#if 0
 			{"quiet", 0, 0, 'q'},
 			{"verbose", 0, 0, 'v'},
 #if (EVMLOG_MODULE_TRACE != 0)
 			{"trace", 0, 0, 't'},
 #endif
+#endif
 #if (EVMLOG_MODULE_DEBUG != 0)
 			{"debug", 0, 0, 'g'},
 #endif
+#if 0
 			{"no-header", 0, 0, 'n'},
 			{"syslog", 0, 0, 's'},
+#endif
 			{"help", 0, 0, 'h'},
 			{0, 0, 0, 0}
 		};
 
+#if 0
 #if (EVMLOG_MODULE_TRACE != 0) && (EVMLOG_MODULE_DEBUG != 0)
 		c = getopt_long(argc, argv, "qvtgnsh", long_options, &option_index);
 #elif (EVMLOG_MODULE_TRACE == 0) && (EVMLOG_MODULE_DEBUG != 0)
@@ -352,10 +358,13 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 #else
 		c = getopt_long(argc, argv, "qvnsh", long_options, &option_index);
 #endif
+#endif
+		c = getopt_long(argc, argv, "gh", long_options, &option_index);
 		if (c == -1)
 			break;
 
 		switch (c) {
+#if 0
 		case 'q':
 			evmlog_normal = 0;
 			break;
@@ -369,6 +378,7 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 			evmlog_trace = 1;
 			break;
 #endif
+#endif
 
 #if (EVMLOG_MODULE_DEBUG != 0)
 		case 'g':
@@ -376,6 +386,7 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 			break;
 #endif
 
+#if 0
 		case 'n':
 			evmlog_add_header = 0;
 			break;
@@ -383,17 +394,20 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 		case 's':
 			evmlog_use_syslog = 1;
 			break;
+#endif
 
 		case 'h':
 			usage_help(argv);
 			exit(EXIT_SUCCESS);
 
 		case '?':
+			usage_help(argv);
 			exit(EXIT_FAILURE);
 			break;
 
 		default:
 			printf("?? getopt returned character code 0%o ??\n", c);
+			usage_help(argv);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -425,6 +439,23 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 			evm_log_error("Unknown object: %s!\n", argv[optind]);
 			exit(EXIT_FAILURE);
 		}
+
+		optind++;
+		if (optind < argc) {
+			evm_log_debug("Parsing expected Object_ID value: %s\n", argv[optind]);
+			if (parse_param_value_ul(argv[optind], &cfg_req.object_id) < 0) {
+				exit(EXIT_FAILURE);
+			}
+			evm_log_debug("Parsed expected Object_ID value: %lu\n", cfg_req.object_id);
+			if (cfg_req.object_id == 0) {
+				evm_log_error("Unknown Object_ID: %s!\n", argv[optind]);
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			evm_log_error("Missing Object_ID!\n");
+			exit(EXIT_FAILURE);
+		}
+
 		optind++;
 		if (optind < argc) {
 			evm_log_debug("Parsing expected command action string: %s\n", argv[optind]);
@@ -435,10 +466,14 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 				}
 			}
 			if (cfg_req.command_action == RAFT_CFG_CMD_UNSPEC) {
-				evm_log_error("Unknown command action: %s!\n", argv[optind]);
+				evm_log_error("Unknown COMMAND: %s!\n", argv[optind]);
 				exit(EXIT_FAILURE);
 			}
+		} else {
+			evm_log_error("Missing COMMAND!\n");
+			exit(EXIT_FAILURE);
 		}
+
 		optind++;
 		switch (cfg_req.object_type) {
 		case RAFT_NLA_CLUSTER:
@@ -461,6 +496,10 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 			printf("\n");
 			exit(EXIT_FAILURE);
 		}
+	} else {
+		evm_log_error("Missing OBJECT!\n");
+		usage_help(argv);
+		exit(EXIT_FAILURE);
 	}
 
 	if (req != NULL)
@@ -652,322 +691,4 @@ out:
 	return 0;
 }
 
-#if 0
-#define fatal(fmt, arg...)	do { printf(fmt, ##arg); exit(EXIT_FAILURE); } while (0)
-
-static int callback(struct nl_msg *msg, void *arg) {
-    struct nlmsghdr *nlh = nlmsg_hdr(msg);
-    struct ifinfomsg *iface = NLMSG_DATA(nlh);
-    struct rtattr *hdr = IFLA_RTA(iface);
-    int remaining = nlh->nlmsg_len - NLMSG_LENGTH(sizeof(*iface));
-
-    //printf("Got something.\n");
-    //nl_msg_dump(msg, stdout);
-
-    while (RTA_OK(hdr, remaining)) {
-        //printf("Loop\n");
-
-        if (hdr->rta_type == IFLA_IFNAME) {
-            printf("Found network interface %d: %s\n", iface->ifi_index, (char *) RTA_DATA(hdr));
-        }
-
-        hdr = RTA_NEXT(hdr, remaining);
-    }
-
-    return NL_OK;
-}
-
-static int list_interface_handler(struct nl_msg *msg, void *arg)
-{
-#if 0
-	struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
-	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-
-	nla_parse(tb_msg, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
-	genlmsg_attrlen(gnlh, 0), NULL);
-
-	if (tb_msg[NL80211_ATTR_IFNAME])
-		printf("Interface: %s\n", nla_get_string(tb_msg[NL80211_ATTR_IFNAME]));
-#endif
-	printf("This is list_interface_handler\n");
-
-	return NL_SKIP;
-}
-
-static int finish_handler(struct nl_msg *msg, void *arg)
-{
-	int *ret = arg;
-	*ret = 0;
-	printf("This is finish_handler\n");
-	return NL_SKIP;
-}
-
-#if 0
-/******************************************************************************
- *
- * Routines used to exchange messages over Netlink sockets
- *
- */
-
-#define NLA_SIZE(type)	(NLA_HDRLEN + NLA_ALIGN(sizeof(type)))
-
-#define nla_for_each_attr(pos, head, len, rem) \
-	for (pos = head, rem = len; nla_ok(pos, rem); pos = nla_next(pos, &(rem)))
-
-static inline void *nla_data(const struct nlattr *nla)
-{
-	return (char *) nla + NLA_HDRLEN;
-}
-
-static inline int nla_ok(const struct nlattr *nla, int remaining)
-{
-	return remaining >= sizeof(*nla) &&
-	       nla->nla_len >= sizeof(*nla) &&
-	       nla->nla_len <= remaining;
-}
-
-static inline struct nlattr *nla_next(const struct nlattr *nla, int *remaining) {
-	int totlen = NLA_ALIGN(nla->nla_len);
-
-	*remaining -= totlen;
-	return (struct nlattr *) ((char *) nla + totlen);
-}
-
-static inline int nla_put_string(struct nlattr *nla, int type, const char *str)
-{
-	int attrlen = strlen(str) + 1;
-
-	nla->nla_len = NLA_HDRLEN + attrlen;
-	nla->nla_type = type;
-	memcpy(nla_data(nla), str, attrlen);
-
-	return NLA_HDRLEN + NLA_ALIGN(attrlen);
-}
-
-static inline __u16 nla_get_u16(struct nlattr *nla)
-{
-	return *(__u16 *) nla_data(nla);
-}
-
-static int write_uninterrupted(int sk, const char *buf, int len)
-{
-	int c;
-
-	while ((c = write(sk, buf, len)) < len) {
-		if (c == -1) {
-			if (errno == EINTR)
-				continue;
-			return -1;
-		}
-
-		buf += c;
-		len -= c;
-	}
-
-	return 0;
-}
-#endif
-
-static int genetlink_call(__u16 family_id, __u8 cmd, void *header,
-                          size_t header_len, void *request, size_t request_len,
-                          void *reply, size_t reply_len)
-{
-	struct msg {
-		struct nlmsghdr n;
-		struct genlmsghdr g;
-		char payload[0];
-	};
-
-	struct msg *request_msg;
-	struct msg *reply_msg;
-	int request_msg_size;
-	int reply_msg_size;
-
-	struct sockaddr_nl local;
-	struct pollfd pfd;
-	int sndbuf = 32*1024; /* 32k */
-	int rcvbuf = 32*1024; /* 32k */
-	int len;
-	int sk;
-
-	/*
-	 * Prepare request/reply messages
-	 */
-	request_msg_size = NLMSG_LENGTH(GENL_HDRLEN + header_len + request_len);
-	request_msg = malloc(request_msg_size);
-	request_msg->n.nlmsg_len = request_msg_size;
-	request_msg->n.nlmsg_type = family_id;
-	request_msg->n.nlmsg_flags = NLM_F_REQUEST;
-	request_msg->n.nlmsg_seq = 0;
-	request_msg->n.nlmsg_pid = getpid();
-	request_msg->g.cmd = cmd;
-	request_msg->g.version = 0;
-	if (header_len)
-		memcpy(&request_msg->payload[0], header, header_len);
-	if (request_len)
-		memcpy(&request_msg->payload[header_len], request, request_len);
-
-	reply_msg_size = NLMSG_LENGTH(GENL_HDRLEN + header_len + reply_len);
-	reply_msg = malloc(reply_msg_size);
-
-	/*
-	 * Create socket
-	 */
-	memset(&local, 0, sizeof(local));
-	local.nl_family = AF_NETLINK;
-
-	if ((sk = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_GENERIC)) == -1)
-		fatal("error creating Netlink socket\n");
-
-	if ((bind(sk, (struct sockaddr*)&local, sizeof(local)) == -1) ||
-	                (setsockopt(sk, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf)) == -1) ||
-	                (setsockopt(sk, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf)) == -1)) {
-		fatal("error creating Netlink socket\n");
-	}
-
-	/*
-	 * Send request
-	 */
-	if (write_uninterrupted(sk, (char*)request_msg, request_msg_size) < 0)
-		fatal("error sending message via Netlink\n");
-
-	/*
-	 * Wait for reply
-	 */
-	pfd.fd = sk;
-	pfd.events = ~POLLOUT;
-	if ((poll(&pfd, 1, 3000) != 1) || !(pfd.revents & POLLIN))
-		fatal("no reply detected from Netlink\n");
-
-	/*
-	 * Read reply
-	 */
-	len = recv(sk, (char*)reply_msg, reply_msg_size, 0);
-	if (len < 0)
-		fatal("error receiving reply message via Netlink\n");
-
-	close(sk);
-
-	/*
-	 * Validate response
-	 */
-	if (!NLMSG_OK(&reply_msg->n, len))
-		fatal("invalid reply message received via Netlink\n");
-
-	if (reply_msg->n.nlmsg_type == NLMSG_ERROR) {
-		len = -1;
-		goto out;
-	}
-
-	if ((request_msg->n.nlmsg_type != reply_msg->n.nlmsg_type) ||
-	                (request_msg->n.nlmsg_seq != reply_msg->n.nlmsg_seq))
-		fatal("unexpected message received via Netlink\n");
-
-	/*
-	 * Copy reply header
-	 */
-	len -= NLMSG_LENGTH(GENL_HDRLEN);
-	if (len < header_len)
-		fatal("too small reply message received via Netlink\n");
-	if (header_len > 0)
-		memcpy(header, &reply_msg->payload[0], header_len);
-
-	/*
-	 * Copy reply payload
-	 */
-	len -= header_len;
-	if (len > reply_len)
-		fatal("reply message too large to copy\n");
-	if (len > 0)
-		memcpy(reply, &reply_msg->payload[header_len], len);
-
-out:
-	free(request_msg);
-	free(reply_msg);
-
-	return len;
-}
-
-static int get_genl_family_id(const char* name)
-{
-	struct nlattr_family_name {
-		char value[GENL_NAMSIZ];
-	};
-
-	struct nlattr_family_id {
-		__u16 value;
-	};
-
-	/*
-	 * Create request/reply buffers
-	 *
-	 * Note that the reply buffer is larger than necessary in case future
-	 * versions of Netlink return additional protocol family attributes
-	 */
-	char request[NLA_SIZE(struct nlattr_family_name)];
-	int request_len = nla_put_string((struct nlattr *)request, CTRL_ATTR_FAMILY_NAME, name);
-
-	char reply[REPLY_LEN];
-
-	/*
-	 * Call control service
-	 */
-	int len = genetlink_call(GENL_ID_CTRL, CTRL_CMD_GETFAMILY,
-	                         0, 0,
-	                         request, request_len,
-	                         reply, sizeof(reply));
-
-	if (len == -1)
-		return -1;
-
-	/*
-	 * Parse reply
-	 */
-	struct nlattr *head = (struct nlattr *) reply;
-	struct nlattr *nla;
-	int rem;
-
-	nla_for_each_attr(nla, head, len, rem) {
-		if (nla->nla_type == CTRL_ATTR_FAMILY_ID)
-			return nla_get_u16(nla);
-	}
-
-	if (rem > 0)
-		fatal("%d bytes leftover after parsing Netlink attributes\n", rem);
-
-	return -1;
-}
-
-#if 0
-static int do_command_netlink(__u16 cmd, void *req_tlv, __u32 req_tlv_space,
-                              void *rep_tlv, __u32 rep_tlv_space)
-{
-	struct tipc_genlmsghdr header;
-	int family_id;
-	int len;
-
-	/*
-	 * Request header
-	 */
-	header.dest = dest;
-	header.cmd = cmd;
-
-	/*
-	 * Get TIPC family id
-	 */
-	if ((family_id = get_genl_family_id(TIPC_GENL_NAME)) == -1)
-		fatal("no Netlink service registered for %s\n", TIPC_GENL_NAME);
-
-	/*
-	 * Call control service
-	 */
-	len = genetlink_call(family_id, TIPC_GENL_CMD,
-	                     &header, sizeof(header),
-	                     req_tlv, req_tlv_space,
-	                     rep_tlv, rep_tlv_space);
-
-	return len;
-}
-#endif
-#endif
 

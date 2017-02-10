@@ -37,6 +37,7 @@ enum {
 struct raft_config_req {
 	int object_type;
 	int command_action;
+	unsigned long object_id;
 	void *command_params;
 };
 
