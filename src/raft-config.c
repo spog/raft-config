@@ -86,18 +86,19 @@ static const char *command_str[] = {
 	RAFT_CFG_CMD_SHOW_STR,
 };
 
-static int parse_param_value_ul(char *str, unsigned long *val)
+static int parse_param_value_u32(char *str, uint32_t *val)
 {
 	char *endptr;
+	unsigned long tmp;
 
 	if (str == NULL) return -1;
 	if (val == NULL) return -1;
 
-	*val = strtoul(str, &endptr, 10);
+	tmp = strtoul(str, &endptr, 10);
 
 	/* Check for various possible errors */
-	if ((errno == ERANGE && (*val == ULONG_MAX))
-	 || (errno != 0 && *val == 0)) {
+	if ((errno == ERANGE && (tmp == ULONG_MAX))
+	 || (errno != 0 && tmp == 0)) {
 		perror("strtol");
 		return -1;
 	}
@@ -106,6 +107,7 @@ static int parse_param_value_ul(char *str, unsigned long *val)
 		return -1;
 	}
 
+	*val = (uint32_t)tmp;
 	return 0;
 }
 
@@ -196,25 +198,25 @@ static int parse_domain_params(struct raft_config_req *cfg_req, int *optind, int
 		evm_log_debug("Parsing expected domain param value: %s\n", argv[*optind]);
 		switch (domain_params.param_type) {
 		case RAFT_NLA_DOMAIN_HEARTBEAT:
-			if (parse_param_value_ul(argv[*optind], &domain_params.heartbeat_value) < 0) {
+			if (parse_param_value_u32(argv[*optind], &domain_params.heartbeat_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected domain heartbeat value: %lu\n", domain_params.heartbeat_value);
 			break;
 		case RAFT_NLA_DOMAIN_ELECTION:
-			if (parse_param_value_ul(argv[*optind], &domain_params.election_value) < 0) {
+			if (parse_param_value_u32(argv[*optind], &domain_params.election_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected domain election value: %lu\n", domain_params.election_value);
 			break;
 		case RAFT_NLA_DOMAIN_MAXNODES:
-			if (parse_param_value_ul(argv[*optind], &domain_params.maxnodes_value) < 0) {
+			if (parse_param_value_u32(argv[*optind], &domain_params.maxnodes_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected domain maxnodes value: %lu\n", domain_params.maxnodes_value);
 			break;
 		case RAFT_NLA_DOMAIN_CLUSTERID:
-			if (parse_param_value_ul(argv[*optind], &domain_params.clusterid_value) < 0) {
+			if (parse_param_value_u32(argv[*optind], &domain_params.clusterid_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected domain clusterid value: %lu\n", domain_params.clusterid_value);
@@ -277,19 +279,19 @@ static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int a
 		evm_log_debug("Parsing expected node param value: %s\n", argv[*optind]);
 		switch (node_params.param_type) {
 		case RAFT_NLA_NODE_CONTACT:
-			if (parse_param_value_ul(argv[*optind], &node_params.contact_value) < 0) {
+			if (parse_param_value_u32(argv[*optind], &node_params.contact_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected node contact value: %lu\n", node_params.contact_value);
 			break;
 		case RAFT_NLA_NODE_DOMAINID:
-			if (parse_param_value_ul(argv[*optind], &node_params.domainid_value) < 0) {
+			if (parse_param_value_u32(argv[*optind], &node_params.domainid_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected node domainid value: %lu\n", node_params.domainid_value);
 			break;
 		case RAFT_NLA_NODE_CLUSTERID:
-			if (parse_param_value_ul(argv[*optind], &node_params.clusterid_value) < 0) {
+			if (parse_param_value_u32(argv[*optind], &node_params.clusterid_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected node clusterid value: %lu\n", node_params.clusterid_value);
@@ -443,7 +445,7 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 		optind++;
 		if (optind < argc) {
 			evm_log_debug("Parsing expected Object_ID value: %s\n", argv[optind]);
-			if (parse_param_value_ul(argv[optind], &cfg_req.object_id) < 0) {
+			if (parse_param_value_u32(argv[optind], &cfg_req.object_id) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected Object_ID value: %lu\n", cfg_req.object_id);
@@ -552,6 +554,69 @@ static int recv_msg(struct nl_msg *msg, void *arg)
 	return 0;
 }
 
+static int put_cluster_attrs(struct nl_msg *msg, struct raft_config_req *cfg_req)
+{
+	struct nlattr *opts;
+	struct raft_cluster_params *cfg_params = (struct raft_cluster_params *)cfg_req->command_params;
+
+	if (!(opts = nla_nest_start(msg, RAFT_NLA_CLUSTER)))
+		goto nla_put_failure;
+
+	nla_put_u32(msg, RAFT_NLA_CLUSTER_ID, cfg_params->id_value);
+//	NLA_PUT_U32(msg, RAFT_NLA_CLUSTER_ID, cfg_params->id_value);
+//	NLA_PUT_STRING(msg, NESTED_BAR, "some text");
+
+	nla_nest_end(msg, opts);
+	return 0;
+
+nla_put_failure:
+	nla_nest_cancel(msg, opts);
+	return -EMSGSIZE;
+}
+
+static int put_domain_attrs(struct nl_msg *msg, struct raft_config_req *cfg_req)
+{
+	struct nlattr *opts;
+	struct raft_domain_params *cfg_params = (struct raft_domain_params *)cfg_req->command_params;
+
+	if (!(opts = nla_nest_start(msg, RAFT_NLA_DOMAIN)))
+		goto nla_put_failure;
+
+	nla_put_u32(msg, RAFT_NLA_DOMAIN_ID, cfg_params->id_value);
+	nla_put_u32(msg, RAFT_NLA_DOMAIN_HEARTBEAT, cfg_params->heartbeat_value);
+	nla_put_u32(msg, RAFT_NLA_DOMAIN_ELECTION, cfg_params->election_value);
+	nla_put_u32(msg, RAFT_NLA_DOMAIN_MAXNODES, cfg_params->maxnodes_value);
+	nla_put_u32(msg, RAFT_NLA_DOMAIN_CLUSTERID, cfg_params->clusterid_value);
+
+	nla_nest_end(msg, opts);
+	return 0;
+
+nla_put_failure:
+	nla_nest_cancel(msg, opts);
+	return -EMSGSIZE;
+}
+
+static int put_node_attrs(struct nl_msg *msg, struct raft_config_req *cfg_req)
+{
+	struct nlattr *opts;
+	struct raft_node_params *cfg_params = (struct raft_node_params *)cfg_req->command_params;
+
+	if (!(opts = nla_nest_start(msg, RAFT_NLA_NODE)))
+		goto nla_put_failure;
+
+	nla_put_u32(msg, RAFT_NLA_NODE_ID, cfg_params->id_value);
+	nla_put_u32(msg, RAFT_NLA_NODE_CONTACT, cfg_params->contact_value);
+	nla_put_u32(msg, RAFT_NLA_NODE_DOMAINID, cfg_params->domainid_value);
+	nla_put_u32(msg, RAFT_NLA_NODE_CLUSTERID, cfg_params->clusterid_value);
+
+	nla_nest_end(msg, opts);
+	return 0;
+
+nla_put_failure:
+	nla_nest_cancel(msg, opts);
+	return -EMSGSIZE;
+}
+
 int raft_config_request(struct raft_config_req *cfg_req)
 {
 	int family_id;
@@ -598,18 +663,26 @@ int raft_config_request(struct raft_config_req *cfg_req)
 		case RAFT_CFG_CMD_ADD:
 			nl_cmd = RAFT_NL_CLUSTER_ADD;
 			nl_flags = NLM_F_REQUEST;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_cluster_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_DEL:
 			nl_cmd = RAFT_NL_CLUSTER_DEL;
 			nl_flags = NLM_F_REQUEST;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_cluster_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_SET:
 			nl_cmd = RAFT_NL_CLUSTER_SET;
 			nl_flags = NLM_F_REQUEST;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_cluster_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_SHOW:
 			nl_cmd = RAFT_NL_CLUSTER_SHOW;
 			nl_flags = NLM_F_DUMP;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_cluster_attrs(msg, cfg_req);
 			break;
 		default:
 			evm_log_error("Command not defined!\n");
@@ -621,18 +694,26 @@ int raft_config_request(struct raft_config_req *cfg_req)
 		case RAFT_CFG_CMD_ADD:
 			nl_cmd = RAFT_NL_DOMAIN_ADD;
 			nl_flags = NLM_F_REQUEST;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_domain_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_DEL:
 			nl_cmd = RAFT_NL_DOMAIN_DEL;
 			nl_flags = NLM_F_REQUEST;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_domain_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_SET:
 			nl_cmd = RAFT_NL_DOMAIN_SET;
 			nl_flags = NLM_F_REQUEST;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_domain_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_SHOW:
 			nl_cmd = RAFT_NL_DOMAIN_SHOW;
 			nl_flags = NLM_F_DUMP;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_domain_attrs(msg, cfg_req);
 			break;
 		default:
 			evm_log_error("Command not defined!\n");
@@ -644,18 +725,26 @@ int raft_config_request(struct raft_config_req *cfg_req)
 		case RAFT_CFG_CMD_ADD:
 			nl_cmd = RAFT_NL_NODE_ADD;
 			nl_flags = NLM_F_REQUEST;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_node_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_DEL:
 			nl_cmd = RAFT_NL_NODE_DEL;
 			nl_flags = NLM_F_REQUEST;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_node_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_SET:
 			nl_cmd = RAFT_NL_NODE_SET;
 			nl_flags = NLM_F_REQUEST;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_node_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_SHOW:
 			nl_cmd = RAFT_NL_NODE_SHOW;
 			nl_flags = NLM_F_DUMP;
+			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+			put_node_attrs(msg, cfg_req);
 			break;
 		default:
 			evm_log_error("Command not defined!\n");
@@ -666,7 +755,7 @@ int raft_config_request(struct raft_config_req *cfg_req)
 		evm_log_error("Object not defined!\n");
 		exit(EXIT_FAILURE);
 	}
-	genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
+//	genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 	nl_send_auto_complete(socket, msg);
 	nlmsg_free(msg);
 

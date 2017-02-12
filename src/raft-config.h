@@ -37,7 +37,7 @@ enum {
 struct raft_config_req {
 	int object_type;
 	int command_action;
-	unsigned long object_id;
+	uint32_t object_id;
 	void *command_params;
 };
 
@@ -46,7 +46,7 @@ struct raft_config_req {
 
 struct raft_cluster_params {
 	int param_type;
-	unsigned long id_value;
+	uint32_t id_value;
 };
 
 #define RAFT_PAR_DOMAIN_UNSPEC_STR ""
@@ -58,11 +58,11 @@ struct raft_cluster_params {
 
 struct raft_domain_params {
 	int param_type;
-	unsigned long id_value;
-	unsigned long heartbeat_value;
-	unsigned long election_value;
-	unsigned long maxnodes_value;
-	unsigned long clusterid_value;
+	uint32_t id_value;
+	uint32_t heartbeat_value;
+	uint32_t election_value;
+	uint32_t maxnodes_value;
+	uint32_t clusterid_value;
 };
 
 #define RAFT_PAR_NODE_UNSPEC_STR ""
@@ -73,10 +73,10 @@ struct raft_domain_params {
 
 struct raft_node_params {
 	int param_type;
-	unsigned long id_value;
-	unsigned long contact_value;
-	unsigned long domainid_value;
-	unsigned long clusterid_value;
+	uint32_t id_value;
+	uint32_t contact_value;
+	uint32_t domainid_value;
+	uint32_t clusterid_value;
 };
 
 int raft_config_request(struct raft_config_req *cfg_req);
