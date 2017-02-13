@@ -61,7 +61,7 @@ static void usage_help(char *argv[])
 	printf("\t-h, --help               Displays this text.\n");
 	printf("\nWhere OBJECT := { cluster | domain | node }\n");
 	printf("\tObjectID := value\n");
-	printf("\nCOMMAND := { add | del | show | set }\n");
+	printf("\nCOMMAND := { add | del | set | show }\n");
 	printf("\nWhen OBJECT := cluster\n");
 	printf("\tPARAMS := { }\n");
 	printf("\nWhen OBJECT := domain\n");
@@ -270,6 +270,10 @@ static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int a
 				node_params.param_type = i;
 				break;
 			}
+		}
+		if (node_params.param_type == RAFT_NLA_NODE_UNSPEC) {
+			evm_log_error("Unknown node parameter: %s!\n", argv[*optind]);
+			exit(EXIT_FAILURE);
 		}
 		(*optind)++;
 		if (*optind >= argc) {
