@@ -175,6 +175,11 @@ static int parse_domain_params(struct raft_config_req *cfg_req, int *optind, int
 		.param_type = RAFT_NLA_DOMAIN_UNSPEC,
 		.id_value = 0,
 		.clusterid_value = 0,
+		.is_set = {
+			.heartbeat = 0,
+			.election = 0,
+			.maxnodes = 0,
+		},
 	};
 
 	if (cfg_req) {
@@ -202,18 +207,21 @@ static int parse_domain_params(struct raft_config_req *cfg_req, int *optind, int
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected domain heartbeat value: %lu\n", domain_params.heartbeat_value);
+			domain_params.is_set.heartbeat = 1;
 			break;
 		case RAFT_NLA_DOMAIN_ELECTION:
 			if (parse_param_value_u32(argv[*optind], &domain_params.election_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected domain election value: %lu\n", domain_params.election_value);
+			domain_params.is_set.election = 1;
 			break;
 		case RAFT_NLA_DOMAIN_MAXNODES:
 			if (parse_param_value_u32(argv[*optind], &domain_params.maxnodes_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
 			evm_log_debug("Parsed expected domain maxnodes value: %lu\n", domain_params.maxnodes_value);
+			domain_params.is_set.maxnodes = 1;
 			break;
 		case RAFT_NLA_DOMAIN_CLUSTERID:
 			if (parse_param_value_u32(argv[*optind], &domain_params.clusterid_value) < 0) {
@@ -587,9 +595,12 @@ static int put_domain_attrs(struct nl_msg *msg, struct raft_config_req *cfg_req)
 		goto nla_put_failure;
 
 	nla_put_u32(msg, RAFT_NLA_DOMAIN_ID, cfg_params->id_value);
-	nla_put_u32(msg, RAFT_NLA_DOMAIN_HEARTBEAT, cfg_params->heartbeat_value);
-	nla_put_u32(msg, RAFT_NLA_DOMAIN_ELECTION, cfg_params->election_value);
-	nla_put_u32(msg, RAFT_NLA_DOMAIN_MAXNODES, cfg_params->maxnodes_value);
+	if (cfg_params->is_set.heartbeat)
+		nla_put_u32(msg, RAFT_NLA_DOMAIN_HEARTBEAT, cfg_params->heartbeat_value);
+	if (cfg_params->is_set.election)
+		nla_put_u32(msg, RAFT_NLA_DOMAIN_ELECTION, cfg_params->election_value);
+	if (cfg_params->is_set.maxnodes)
+		nla_put_u32(msg, RAFT_NLA_DOMAIN_MAXNODES, cfg_params->maxnodes_value);
 	nla_put_u32(msg, RAFT_NLA_DOMAIN_CLUSTERID, cfg_params->clusterid_value);
 
 	nla_nest_end(msg, opts);

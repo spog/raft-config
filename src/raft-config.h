@@ -56,6 +56,12 @@ struct raft_cluster_params {
 #define RAFT_PAR_DOMAIN_MAXNODES_STR "maxnodes"
 #define RAFT_PAR_DOMAIN_CLUSTERID_STR "clusterid"
 
+struct raft_domain_include {
+	int heartbeat;
+	int election;
+	int maxnodes;
+};
+
 struct raft_domain_params {
 	int param_type;
 	uint32_t id_value;
@@ -63,6 +69,7 @@ struct raft_domain_params {
 	uint32_t election_value;
 	uint32_t maxnodes_value;
 	uint32_t clusterid_value;
+	struct raft_domain_include is_set;
 };
 
 #define RAFT_PAR_NODE_UNSPEC_STR ""
