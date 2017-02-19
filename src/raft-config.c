@@ -67,7 +67,7 @@ static void usage_help(char *argv[])
 	printf("\nWhen OBJECT := domain\n");
 	printf("\tPARAMS := { clusterid value [ heartbeat value ] [ election value ] [ maxnodes value ] }\n");
 	printf("\nWhen OBJECT := node\n");
-	printf("\tPARAMS := { clusterid value domainid value [ contact value ] }\n");
+	printf("\tPARAMS := { clusterid value domainid value [ contact v4ip_address ] }\n");
 	printf("\n");
 }
 
@@ -85,6 +85,24 @@ static const char *command_str[] = {
 	RAFT_CFG_CMD_SET_STR,
 	RAFT_CFG_CMD_SHOW_STR,
 };
+
+static int parse_param_value_v4addr(char *str, uint32_t *val)
+{
+	int err;
+	struct nl_addr *a;
+
+	if (str == NULL) return -1;
+	if (val == NULL) return -1;
+
+	err = nl_addr_parse(str, AF_INET, &a);
+	if (err) {
+		evm_log_error("Invalid address format\n");
+		return -1;
+	}
+
+	*val = *(uint32_t*)nl_addr_get_binary_addr(a);;
+	return 0;
+}
 
 static int parse_param_value_u32(char *str, uint32_t *val)
 {
@@ -264,6 +282,9 @@ static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int a
 		.id_value = 0,
 		.domainid_value = 0,
 		.clusterid_value = 0,
+		.is_set = {
+			.contact = 0,
+		},
 	};
 
 	if (cfg_req) {
@@ -291,10 +312,11 @@ static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int a
 		evm_log_debug("Parsing expected node param value: %s\n", argv[*optind]);
 		switch (node_params.param_type) {
 		case RAFT_NLA_NODE_CONTACT:
-			if (parse_param_value_u32(argv[*optind], &node_params.contact_value) < 0) {
+			if (parse_param_value_v4addr(argv[*optind], &node_params.contact_value) < 0) {
 				exit(EXIT_FAILURE);
 			}
-			evm_log_debug("Parsed expected node contact value: %lu\n", node_params.contact_value);
+			evm_log_debug("Parsed expected node contact value: 0x%x\n", node_params.contact_value);
+			node_params.is_set.contact = 1;
 			break;
 		case RAFT_NLA_NODE_DOMAINID:
 			if (parse_param_value_u32(argv[*optind], &node_params.domainid_value) < 0) {
@@ -620,7 +642,8 @@ static int put_node_attrs(struct nl_msg *msg, struct raft_config_req *cfg_req)
 		goto nla_put_failure;
 
 	nla_put_u32(msg, RAFT_NLA_NODE_ID, cfg_params->id_value);
-	nla_put_u32(msg, RAFT_NLA_NODE_CONTACT, cfg_params->contact_value);
+	if (cfg_params->is_set.contact)
+		nla_put_u32(msg, RAFT_NLA_NODE_CONTACT, cfg_params->contact_value);
 	nla_put_u32(msg, RAFT_NLA_NODE_DOMAINID, cfg_params->domainid_value);
 	nla_put_u32(msg, RAFT_NLA_NODE_CLUSTERID, cfg_params->clusterid_value);
 

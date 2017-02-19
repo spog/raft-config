@@ -78,12 +78,17 @@ struct raft_domain_params {
 #define RAFT_PAR_NODE_DOMAINID_STR "domainid"
 #define RAFT_PAR_NODE_CLUSTERID_STR "clusterid"
 
+struct raft_node_include {
+	int contact;
+};
+
 struct raft_node_params {
 	int param_type;
 	uint32_t id_value;
 	uint32_t contact_value;
 	uint32_t domainid_value;
 	uint32_t clusterid_value;
+	struct raft_node_include is_set;
 };
 
 int raft_config_request(struct raft_config_req *cfg_req);
