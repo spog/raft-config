@@ -12,7 +12,7 @@
 include $(_SRCDIR_)/default.mk
 TOPDIR := .
 
-SUBDIRS := src
+SUBDIRS := src misc
 export SUBDIRS
 
 .PHONY: all

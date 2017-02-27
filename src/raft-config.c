@@ -42,7 +42,7 @@ unsigned int evmlog_add_header = 0;
 static void usage_help(char *argv[])
 {
 	printf("Usage:\n");
-	printf("\t%s [OPTIONS] OBJECT ObjectID COMMAND [PARAMS]\n", argv[0]);
+	printf("\t%s [OPTIONS] COMMAND OBJECT ObjectID [PARAMS]\n", argv[0]);
 	printf("OPTIONS:\n");
 #if 0
 	printf("\t-q, --quiet              Disable all output.\n");
@@ -59,9 +59,9 @@ static void usage_help(char *argv[])
 	printf("\t-n, --no-header          No EVMLOG header added to every evm_log_... output.\n");
 #endif
 	printf("\t-h, --help               Displays this text.\n");
+	printf("\nCOMMAND := { add | del | set | show }\n");
 	printf("\nWhere OBJECT := { cluster | domain | node }\n");
 	printf("\tObjectID := value\n");
-	printf("\nCOMMAND := { add | del | set | show }\n");
 	printf("\nWhen OBJECT := cluster\n");
 	printf("\tPARAMS := { }\n");
 	printf("\nWhen OBJECT := domain\n");
@@ -464,15 +464,34 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 
 	if (optind < argc) {
 		int i;
-		evm_log_debug("Parsing expected object string: %s\n", argv[optind]);
-		for (i = RAFT_NLA_UNSPEC; i <= RAFT_NLA_MAX; i++) {
-			if (strstr(object_str[i], argv[optind]) == object_str[i]) {
-				cfg_req.object_type = i;
+
+		evm_log_debug("Parsing expected command action string: %s\n", argv[optind]);
+		for (i = RAFT_CFG_CMD_UNSPEC; i <= RAFT_CFG_CMD_MAX; i++) {
+			if (strstr(command_str[i], argv[optind]) == command_str[i]) {
+				cfg_req.command_action = i;
 				break;
 			}
 		}
-		if (cfg_req.object_type == RAFT_NLA_UNSPEC) {
-			evm_log_error("Unknown object: %s!\n", argv[optind]);
+		if (cfg_req.command_action == RAFT_CFG_CMD_UNSPEC) {
+			evm_log_error("Unknown COMMAND: %s!\n", argv[optind]);
+			exit(EXIT_FAILURE);
+		}
+
+		optind++;
+		if (optind < argc) {
+			evm_log_debug("Parsing expected object string: %s\n", argv[optind]);
+			for (i = RAFT_NLA_UNSPEC; i <= RAFT_NLA_MAX; i++) {
+				if (strstr(object_str[i], argv[optind]) == object_str[i]) {
+					cfg_req.object_type = i;
+					break;
+				}
+			}
+			if (cfg_req.object_type == RAFT_NLA_UNSPEC) {
+				evm_log_error("Unknown object: %s!\n", argv[optind]);
+				exit(EXIT_FAILURE);
+			}
+		} else {
+			evm_log_error("Missing OBJECT!\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -489,24 +508,6 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 			}
 		} else {
 			evm_log_error("Missing Object_ID!\n");
-			exit(EXIT_FAILURE);
-		}
-
-		optind++;
-		if (optind < argc) {
-			evm_log_debug("Parsing expected command action string: %s\n", argv[optind]);
-			for (i = RAFT_CFG_CMD_UNSPEC; i <= RAFT_CFG_CMD_MAX; i++) {
-				if (strstr(command_str[i], argv[optind]) == command_str[i]) {
-					cfg_req.command_action = i;
-					break;
-				}
-			}
-			if (cfg_req.command_action == RAFT_CFG_CMD_UNSPEC) {
-				evm_log_error("Unknown COMMAND: %s!\n", argv[optind]);
-				exit(EXIT_FAILURE);
-			}
-		} else {
-			evm_log_error("Missing COMMAND!\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -533,7 +534,7 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 			exit(EXIT_FAILURE);
 		}
 	} else {
-		evm_log_error("Missing OBJECT!\n");
+		evm_log_error("Missing COMMAND!\n");
 		usage_help(argv);
 		exit(EXIT_FAILURE);
 	}

@@ -1,0 +1,163 @@
+_check_raft_config_arg()
+{
+	for word in "${COMP_WORDS[@]}"; do
+		if [ "x"$word == "x"$1 ]; then
+			return 0
+		fi
+	done
+	return 1
+}
+
+_get_raft_config_cmd()
+{
+	for word in "${COMP_WORDS[@]}"; do
+		case "${word}" in
+		add | del | set | show)
+			echo -n $word
+			return 0
+			;;
+		*)
+			;;
+		esac
+	done
+	return 1
+}
+
+_get_raft_config_object()
+{
+	for word in "${COMP_WORDS[@]}"; do
+		case "${word}" in
+		cluster | domain | node)
+			echo -n $word
+			return 0
+			;;
+		*)
+			;;
+		esac
+	done
+	return 1
+}
+
+_check_raft_config_params()
+{
+	for word in "${COMP_WORDS[@]}"; do
+		case "${word}" in
+		clusterid | domainid | heartbeat | election | maxnodes | contact)
+			if [ "x"$word == "x"$1 ]; then
+				return 0
+			fi
+			;;
+		*)
+			;;
+		esac
+	done
+	return 1
+}
+
+_raft_config()  
+{
+	local cur prev opts pprev cmd object rep
+	COMPREPLY=()
+	cur="${COMP_WORDS[COMP_CWORD]}"
+	prev="${COMP_WORDS[COMP_CWORD-1]}"
+	rep=""
+
+	case "$prev" in
+	raft-config)
+		COMPREPLY=( $(compgen -W "-g --debug -h --help add del set show" -- $cur) )
+		;;
+	-g | --debug)
+		COMPREPLY=( $(compgen -W "-h --help add del set show" -- $cur) )
+		;;
+	-h | --help)
+		;;
+	add | del | set | show)
+		COMPREPLY=( $(compgen -W "cluster domain node" -- $cur) )
+		;;
+	cluster | domain | node)
+		;;
+
+	*)
+		_check_raft_config_params $prev
+		if [ $? -eq 0 ]; then
+			return 0;
+		fi
+		cmd=$(_get_raft_config_cmd)
+		if [ $? -ne 0 ]; then
+			return 0
+		fi
+		object=$(_get_raft_config_object)
+		if [ $? -ne 0 ]; then
+			return 0
+		fi
+		case "$cmd" in
+		add | set)
+			if [ $object == "cluster" ]; then
+				return 0
+			elif [ $object == "domain" ]; then
+				_check_raft_config_arg clusterid
+				if [ $? -ne 0 ]; then
+					rep="${rep} clusterid"
+				fi
+				_check_raft_config_arg heartbeat
+				if [ $? -ne 0 ]; then
+					rep="${rep} heartbeat"
+				fi
+				_check_raft_config_arg election
+				if [ $? -ne 0 ]; then
+					rep="${rep} election"
+				fi
+				_check_raft_config_arg maxnodes
+				if [ $? -ne 0 ]; then
+					rep="${rep} maxnodes"
+				fi
+				COMPREPLY=( $(compgen -W "${rep}" -- $cur) )
+				return 0
+			elif [ $object == "node" ]; then
+				_check_raft_config_arg clusterid
+				if [ $? -ne 0 ]; then
+					rep="${rep} clusterid"
+				fi
+				_check_raft_config_arg domainid
+				if [ $? -ne 0 ]; then
+					rep="${rep} domainid"
+				fi
+				_check_raft_config_arg contact
+				if [ $? -ne 0 ]; then
+					rep="${rep} contact"
+				fi
+				COMPREPLY=( $(compgen -W "${rep}" -- $cur) )
+				return 0
+			fi
+			;;
+		del | show)
+			if [ $object == "cluster" ]; then
+				return 0
+			elif [ $object == "domain" ]; then
+				_check_raft_config_arg clusterid
+				if [ $? -ne 0 ]; then
+					rep="${rep} clusterid"
+				fi
+				COMPREPLY=( $(compgen -W "${rep}" -- $cur) )
+				return 0
+			elif [ $object == "node" ]; then
+				_check_raft_config_arg clusterid
+				if [ $? -ne 0 ]; then
+					rep="${rep} clusterid"
+				fi
+				_check_raft_config_arg domainid
+				if [ $? -ne 0 ]; then
+					rep="${rep} domainid"
+				fi
+				COMPREPLY=( $(compgen -W "${rep}" -- $cur) )
+				return 0
+			fi
+			;;
+		*)
+			;;
+		esac
+	esac
+}
+
+complete -F _raft_config raft-config
+

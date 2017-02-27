@@ -63,6 +63,7 @@ PACKAGES = "${PN}-dbg ${PN}"
 
 FILES_${PN} = "\
 /usr/local/sbin/raft-config \
+/usr/local/etc/bash_completion.d/raft-config \
 "
 
 INSANE_SKIP_${PN} = "ldflags"

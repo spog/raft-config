@@ -11,15 +11,18 @@
 
 include $(_SRCDIR_)/default.mk
 
+SUBDIRS :=
+export SUBDIRS
+
 TARGET := raft-config
-TPATH := $(_BUILD_PREFIX_)/sbin
-IPATH := $(_INSTALL_PREFIX_)/sbin
+TPATH := $(_BUILD_PREFIX_)/etc/bash_completion.d
+IPATH := $(_INSTALL_PREFIX_)/etc/bash_completion.d
 
 .PHONY: all
-all: $(TPATH)/$(TARGET) subdirs_all
+all: $(TPATH)/$(TARGET)
 
-$(TPATH)/$(TARGET): $(_SRCDIR_)/$(SUBPATH)/raft-config.c $(_SRCDIR_)/$(SUBPATH)/raft-config.h $(TPATH)
-	$(CC) -o $@ $(shell pkg-config --cflags --libs libnl-genl-3.0) $<
+$(TPATH)/$(TARGET): $(_SRCDIR_)/$(SUBPATH)/$(TARGET) $(TPATH)
+	cp -pf $< $@
 
 $(TPATH):
 	install -d $@
@@ -32,18 +35,4 @@ $(IPATH):
 
 $(IPATH)/$(TARGET):
 	install $(TPATH)/$(TARGET) $@
-
-##
-# Subdirs to handle:
-##
-SUBDIRS := utils tools
-export SUBDIRS
-
-.PHONY: subdirs_all
-subdirs_all:
-	$(_SRCDIR_)/default.sh subdirs_make all
-
-.PHONY: subdirs_install
-subdirs_install:
-	$(_SRCDIR_)/default.sh subdirs_make install
 
