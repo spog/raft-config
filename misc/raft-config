@@ -98,6 +98,8 @@ _raft_config()
 				_check_raft_config_arg clusterid
 				if [ $? -ne 0 ]; then
 					rep="${rep} clusterid"
+					COMPREPLY=( $(compgen -W "${rep}" -- $cur) )
+					return 0
 				fi
 				_check_raft_config_arg heartbeat
 				if [ $? -ne 0 ]; then
@@ -117,10 +119,14 @@ _raft_config()
 				_check_raft_config_arg clusterid
 				if [ $? -ne 0 ]; then
 					rep="${rep} clusterid"
+					COMPREPLY=( $(compgen -W "${rep}" -- $cur) )
+					return 0
 				fi
 				_check_raft_config_arg domainid
 				if [ $? -ne 0 ]; then
 					rep="${rep} domainid"
+					COMPREPLY=( $(compgen -W "${rep}" -- $cur) )
+					return 0
 				fi
 				_check_raft_config_arg contact
 				if [ $? -ne 0 ]; then
