@@ -74,22 +74,33 @@ _raft_config()
 	add | del | set | show)
 		COMPREPLY=( $(compgen -W "cluster domain node" -- $cur) )
 		;;
-	cluster | domain | node)
-		;;
 
 	*)
 		_check_raft_config_params $prev
 		if [ $? -eq 0 ]; then
 			return 0;
 		fi
+
 		cmd=$(_get_raft_config_cmd)
 		if [ $? -ne 0 ]; then
 			return 0
 		fi
+
 		object=$(_get_raft_config_object)
 		if [ $? -ne 0 ]; then
 			return 0
 		fi
+
+		case "$prev" in
+		cluster | domain | node)
+			if [ $cmd != "show" ]; then
+				return 0
+			fi
+			;;
+		*)
+			;;
+		esac
+
 		case "$cmd" in
 		add | set)
 			if [ $object == "cluster" ]; then
@@ -136,7 +147,7 @@ _raft_config()
 				return 0
 			fi
 			;;
-		del | show)
+		del)
 			if [ $object == "cluster" ]; then
 				return 0
 			elif [ $object == "domain" ]; then
@@ -158,6 +169,27 @@ _raft_config()
 				COMPREPLY=( $(compgen -W "${rep}" -- $cur) )
 				return 0
 			fi
+			;;
+		show)
+			if [ $object == "cluster" ]; then
+				return 0
+			elif [ $object == "domain" ]; then
+				_check_raft_config_arg clusterid
+				if [ $? -ne 0 ]; then
+					rep="${rep} clusterid"
+				fi
+			elif [ $object == "node" ]; then
+				_check_raft_config_arg clusterid
+				if [ $? -ne 0 ]; then
+					rep="${rep} clusterid"
+				fi
+				_check_raft_config_arg domainid
+				if [ $? -ne 0 ]; then
+					rep="${rep} domainid"
+				fi
+			fi
+			COMPREPLY=( $(compgen -W "${rep}" -- $cur) )
+			return 0
 			;;
 		*)
 			;;

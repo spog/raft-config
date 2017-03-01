@@ -42,32 +42,44 @@ unsigned int evmlog_add_header = 0;
 static void usage_help(char *argv[])
 {
 	printf("Usage:\n");
-	printf("\t%s [OPTIONS] COMMAND OBJECT ObjectID [PARAMS]\n", argv[0]);
+	printf("  %s [ OPTIONS ] COMMAND OBJECT [ ObjectID ] [ PARAMS ]\n", argv[0]);
+	printf("\n");
 	printf("OPTIONS:\n");
 #if 0
-	printf("\t-q, --quiet              Disable all output.\n");
-	printf("\t-v, --verbose            Enable verbose output.\n");
+	printf("  -q, --quiet              Disable all output.\n");
+	printf("  -v, --verbose            Enable verbose output.\n");
 #if (EVMLOG_MODULE_TRACE != 0)
-	printf("\t-t, --trace              Enable trace output.\n");
+	printf("  -t, --trace              Enable trace output.\n");
 #endif
 #endif
 #if (EVMLOG_MODULE_DEBUG != 0)
-	printf("\t-g, --debug              Enable debug output.\n");
+	printf("  -g, --debug              Enable debug output.\n");
 #endif
 #if 0
-	printf("\t-s, --syslog             Enable syslog output (instead of stdout, stderr).\n");
-	printf("\t-n, --no-header          No EVMLOG header added to every evm_log_... output.\n");
+	printf("  -s, --syslog             Enable syslog output (instead of stdout, stderr).\n");
+	printf("  -n, --no-header          No EVMLOG header added to every evm_log_... output.\n");
 #endif
-	printf("\t-h, --help               Displays this text.\n");
-	printf("\nCOMMAND := { add | del | set | show }\n");
-	printf("\nWhere OBJECT := { cluster | domain | node }\n");
-	printf("\tObjectID := value\n");
-	printf("\nWhen OBJECT := cluster\n");
-	printf("\tPARAMS := { }\n");
-	printf("\nWhen OBJECT := domain\n");
-	printf("\tPARAMS := { clusterid value [ heartbeat value ] [ election value ] [ maxnodes value ] }\n");
-	printf("\nWhen OBJECT := node\n");
-	printf("\tPARAMS := { clusterid value domainid value [ contact v4ip_address ] }\n");
+	printf("  -h, --help               Displays this text.\n");
+	printf("\n");
+	printf("COMMAND := { add | set }\n");
+	printf("  Where OBJECT := { { cluster | domain | node } ObjectID }\n");
+	printf("\n");
+	printf("  OBJECT := { cluster value }\n");
+	printf("    PARAMS := { }\n");
+	printf("  OBJECT := { domain value }\n");
+	printf("    PARAMS := { clusterid value [ heartbeat value ] [ election value ] [ maxnodes value ] }\n");
+	printf("  OBJECT := { node value }\n");
+	printf("    PARAMS := { clusterid value domainid value [ contact v4ip_address ] }\n");
+	printf("\n");
+	printf("COMMAND := { del | show }\n");
+	printf("  Where OBJECT := { { cluster | domain | node } [ ObjectID ] }\n");
+	printf("\n");
+	printf("  OBJECT := { cluster [ value ] }\n");
+	printf("    PARAMS := { }\n");
+	printf("  OBJECT := { domain [ value ] }\n");
+	printf("    PARAMS := { clusterid value }\n");
+	printf("  OBJECT := { node [ value ] }\n");
+	printf("    PARAMS := { clusterid value domainid value }\n");
 	printf("\n");
 }
 
