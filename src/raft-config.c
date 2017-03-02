@@ -42,7 +42,7 @@ unsigned int evmlog_add_header = 0;
 static void usage_help(char *argv[])
 {
 	printf("Usage:\n");
-	printf("  %s [ OPTIONS ] COMMAND OBJECT [ ObjectID ] [ PARAMS ]\n", argv[0]);
+	printf("  %s [OPTIONS] COMMAND OBJECT [ObjectID] [PARAMS]\n", argv[0]);
 	printf("\n");
 	printf("OPTIONS:\n");
 #if 0
@@ -61,25 +61,23 @@ static void usage_help(char *argv[])
 #endif
 	printf("  -h, --help               Displays this text.\n");
 	printf("\n");
-	printf("COMMAND := { add | set }\n");
-	printf("  Where OBJECT := { { cluster | domain | node } ObjectID }\n");
+	printf(" if COMMAND := {add | set}\n");
+	printf("then OBJECT := {{cluster | domain | node} ObjectID}\n");
+	printf("    if OBJECT := {cluster value}\n");
+	printf("  then PARAMS := {}\n");
+	printf("    if OBJECT := {domain value}\n");
+	printf("  then PARAMS := {clusterid value [heartbeat value] [election value] [maxnodes value]}\n");
+	printf("    if OBJECT := {node value}\n");
+	printf("  then PARAMS := {clusterid value domainid value [contact v4ip_address]}\n");
 	printf("\n");
-	printf("  OBJECT := { cluster value }\n");
-	printf("    PARAMS := { }\n");
-	printf("  OBJECT := { domain value }\n");
-	printf("    PARAMS := { clusterid value [ heartbeat value ] [ election value ] [ maxnodes value ] }\n");
-	printf("  OBJECT := { node value }\n");
-	printf("    PARAMS := { clusterid value domainid value [ contact v4ip_address ] }\n");
-	printf("\n");
-	printf("COMMAND := { del | show }\n");
-	printf("  Where OBJECT := { { cluster | domain | node } [ ObjectID ] }\n");
-	printf("\n");
-	printf("  OBJECT := { cluster [ value ] }\n");
-	printf("    PARAMS := { }\n");
-	printf("  OBJECT := { domain [ value ] }\n");
-	printf("    PARAMS := { clusterid value }\n");
-	printf("  OBJECT := { node [ value ] }\n");
-	printf("    PARAMS := { clusterid value domainid value }\n");
+	printf(" if COMMAND := {del | show}\n");
+	printf("then OBJECT := {{cluster | domain | node} [ObjectID]}\n");
+	printf("    if OBJECT := {cluster [value]}\n");
+	printf("  then PARAMS := {}\n");
+	printf("    if OBJECT := {domain [value]}\n");
+	printf("  then PARAMS := {clusterid value}\n");
+	printf("    if OBJECT := {node [value]}\n");
+	printf("  then PARAMS := {clusterid value domainid value}\n");
 	printf("\n");
 }
 
@@ -182,8 +180,10 @@ static int parse_cluster_params(struct raft_config_req *cfg_req, int *optind, in
 		(*optind)++;
 	}
 	if (cluster_params.id_value == 0) {
-		evm_log_error("Missing cluster id!\n");
-		exit(EXIT_FAILURE);
+		if (cfg_req->command_action != RAFT_CFG_CMD_SHOW) {
+			evm_log_error("Missing cluster id!\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 	cfg_req->command_params = (void *)&cluster_params;
 	return 0;
@@ -267,8 +267,10 @@ static int parse_domain_params(struct raft_config_req *cfg_req, int *optind, int
 		(*optind)++;
 	}
 	if (domain_params.id_value == 0) {
-		evm_log_error("Missing domain id!\n");
-		exit(EXIT_FAILURE);
+		if (cfg_req->command_action != RAFT_CFG_CMD_SHOW) {
+			evm_log_error("Missing domain id!\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 	if (domain_params.clusterid_value == 0) {
 		evm_log_error("Missing clusterid!\n");
@@ -350,8 +352,10 @@ static int parse_node_params(struct raft_config_req *cfg_req, int *optind, int a
 		(*optind)++;
 	}
 	if (node_params.id_value == 0) {
-		evm_log_error("Missing node id!\n");
-		exit(EXIT_FAILURE);
+		if (cfg_req->command_action != RAFT_CFG_CMD_SHOW) {
+			evm_log_error("Missing node id!\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 	if (node_params.domainid_value == 0) {
 		evm_log_error("Missing domainid!\n");
@@ -511,16 +515,23 @@ static int usage_check(int argc, char *argv[], struct raft_config_req **req)
 		if (optind < argc) {
 			evm_log_debug("Parsing expected Object_ID value: %s\n", argv[optind]);
 			if (parse_param_value_u32(argv[optind], &cfg_req.object_id) < 0) {
-				exit(EXIT_FAILURE);
+				if (cfg_req.command_action != RAFT_CFG_CMD_SHOW) {
+					exit(EXIT_FAILURE);
+				}
 			}
 			evm_log_debug("Parsed expected Object_ID value: %lu\n", cfg_req.object_id);
 			if (cfg_req.object_id == 0) {
-				evm_log_error("Unknown Object_ID: %s!\n", argv[optind]);
-				exit(EXIT_FAILURE);
+				if (cfg_req.command_action != RAFT_CFG_CMD_SHOW) {
+					evm_log_error("Unknown Object_ID: %s!\n", argv[optind]);
+					exit(EXIT_FAILURE);
+				} else
+					optind--;
 			}
 		} else {
-			evm_log_error("Missing Object_ID!\n");
-			exit(EXIT_FAILURE);
+			if (cfg_req.command_action != RAFT_CFG_CMD_SHOW) {
+				evm_log_error("Missing Object_ID!\n");
+				exit(EXIT_FAILURE);
+			}
 		}
 
 		optind++;
