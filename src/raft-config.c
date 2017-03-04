@@ -724,19 +724,19 @@ int raft_config_request(struct raft_config_req *cfg_req)
 		switch (cfg_req->command_action) {
 		case RAFT_CFG_CMD_ADD:
 			nl_cmd = RAFT_NL_CLUSTER_ADD;
-			nl_flags = NLM_F_REQUEST;
+			nl_flags = NLM_F_REQUEST | NLM_F_ACK;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_cluster_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_DEL:
 			nl_cmd = RAFT_NL_CLUSTER_DEL;
-			nl_flags = NLM_F_REQUEST;
+			nl_flags = NLM_F_REQUEST | NLM_F_ACK;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_cluster_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_SET:
 			nl_cmd = RAFT_NL_CLUSTER_SET;
-			nl_flags = NLM_F_REQUEST;
+			nl_flags = NLM_F_REQUEST | NLM_F_ACK;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_cluster_attrs(msg, cfg_req);
 			break;
@@ -755,19 +755,19 @@ int raft_config_request(struct raft_config_req *cfg_req)
 		switch (cfg_req->command_action) {
 		case RAFT_CFG_CMD_ADD:
 			nl_cmd = RAFT_NL_DOMAIN_ADD;
-			nl_flags = NLM_F_REQUEST;
+			nl_flags = NLM_F_REQUEST | NLM_F_ACK;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_domain_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_DEL:
 			nl_cmd = RAFT_NL_DOMAIN_DEL;
-			nl_flags = NLM_F_REQUEST;
+			nl_flags = NLM_F_REQUEST | NLM_F_ACK;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_domain_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_SET:
 			nl_cmd = RAFT_NL_DOMAIN_SET;
-			nl_flags = NLM_F_REQUEST;
+			nl_flags = NLM_F_REQUEST | NLM_F_ACK;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_domain_attrs(msg, cfg_req);
 			break;
@@ -786,19 +786,19 @@ int raft_config_request(struct raft_config_req *cfg_req)
 		switch (cfg_req->command_action) {
 		case RAFT_CFG_CMD_ADD:
 			nl_cmd = RAFT_NL_NODE_ADD;
-			nl_flags = NLM_F_REQUEST;
+			nl_flags = NLM_F_REQUEST | NLM_F_ACK;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_node_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_DEL:
 			nl_cmd = RAFT_NL_NODE_DEL;
-			nl_flags = NLM_F_REQUEST;
+			nl_flags = NLM_F_REQUEST | NLM_F_ACK;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_node_attrs(msg, cfg_req);
 			break;
 		case RAFT_CFG_CMD_SET:
 			nl_cmd = RAFT_NL_NODE_SET;
-			nl_flags = NLM_F_REQUEST;
+			nl_flags = NLM_F_REQUEST | NLM_F_ACK;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_node_attrs(msg, cfg_req);
 			break;
@@ -818,9 +818,27 @@ int raft_config_request(struct raft_config_req *cfg_req)
 		exit(EXIT_FAILURE);
 	}
 //	genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
-	nl_send_auto_complete(socket, msg);
+//	ret = nl_send_auto_complete(socket, msg);
+	ret = nl_send_auto(socket, msg);
+	evm_log_debug("nl_send_auto returned %d\n", ret);
 	nlmsg_free(msg);
+	if (ret < 0) {
+		evm_log_error("Netlink message send failed!\n");
+//		exit(EXIT_FAILURE);
+//		exit(-ret);
+		return ret;
+	}
 
+	ret = nl_wait_for_ack(socket);
+	evm_log_debug("nl_wait_for_ack returned %d\n", ret);
+	if (ret < 0) {
+		evm_log_error("Kernel action failed!\n");
+//		exit(EXIT_FAILURE);
+//		exit(-ret);
+	}
+	return ret;
+
+#if 0
 //	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &err);
 
 	/* set the callback function to receive answers to recv_msg */
@@ -840,6 +858,7 @@ out:
 	nl_socket_free(socket);
 
 	return 0;
+#endif
 }
 
 
