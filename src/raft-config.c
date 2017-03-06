@@ -581,35 +581,40 @@ int main(int argc, char *argv[])
 	exit(EXIT_SUCCESS);
 }
 
-static int recv_msg(struct nl_msg *msg, void *arg)
+static int recv_msg_cluster_dump(struct nl_msg *msg, void *arg)
 {
-	int *ret = arg;
 	struct nlmsghdr *nlh = nlmsg_hdr(msg);
 	struct nlattr *attrs[RAFT_NLA_MAX+1];
+	struct nlattr *cluster_attrs[RAFT_NLA_CLUSTER_MAX+1];
+	/* Properties valid for cluster */
+	struct nla_policy raft_nl_cluster_policy[RAFT_NLA_CLUSTER_MAX + 1] = {
+		[RAFT_NLA_CLUSTER_UNSPEC]	= { .type = NLA_UNSPEC },
+		[RAFT_NLA_CLUSTER_ID]		= { .type = NLA_U32 },
+	};
 
-	printf("recv_msg\n");
-	/* in theory we could use genlmsg_parse
- 	 * but on my system it does not work ->
- 	 * we use nla_parse */
-//	genlmsg_parse(nlh, 0, attrs, DOC_EXMPL_A_MAX, NULL);
+
+//	printf("recv_msg_cluster_dump\n");
 	struct genlmsghdr *ghdr = nlmsg_data(nlh);
 	if (nla_parse(attrs, RAFT_NLA_MAX, genlmsg_attrdata(ghdr, 0),
 			 genlmsg_attrlen(ghdr, 0), NULL) < 0) {
-		printf("couldn't parse attributes\n");
+		evm_log_error("couldn't parse attributes\n");
 		return -1;
 	}
 
 	/* the data is in the attribute RAFT_NLA_CLUSTER */
-	if (attrs[RAFT_NLA_CLUSTER]) {
-		char *value = nla_get_string(attrs[RAFT_NLA_CLUSTER]);
-		printf("message received: %s\n", value);
-	}
-	else {
-		printf("error receiving message\n");
+	if (!attrs[RAFT_NLA_CLUSTER]) {
+		evm_log_error("cluster info missing\n");
+		return NL_SKIP;
 	}
 
-	*ret = 0;
-	return 0;
+	if (nla_parse_nested(cluster_attrs, RAFT_NLA_CLUSTER_MAX, attrs[RAFT_NLA_CLUSTER], raft_nl_cluster_policy)) {
+		evm_log_error("failed to parse nested attributes!\n");
+		return NL_SKIP;
+	}
+	if (!cluster_attrs[RAFT_NLA_CLUSTER_ID]) return NL_SKIP;
+	printf("Cluster: ID %u\n", nla_get_u32(cluster_attrs[RAFT_NLA_CLUSTER_ID]));
+
+	return NL_SKIP;
 }
 
 static int put_cluster_attrs(struct nl_msg *msg, struct raft_config_req *cfg_req)
@@ -742,7 +747,7 @@ int raft_config_request(struct raft_config_req *cfg_req)
 			break;
 		case RAFT_CFG_CMD_SHOW:
 			nl_cmd = RAFT_NL_CLUSTER_SHOW;
-			nl_flags = NLM_F_DUMP;
+			nl_flags = NLM_F_REQUEST | NLM_F_DUMP;
 			genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, nl_flags, nl_cmd, 0);
 			put_cluster_attrs(msg, cfg_req);
 			break;
@@ -829,36 +834,45 @@ int raft_config_request(struct raft_config_req *cfg_req)
 		return ret;
 	}
 
-	ret = nl_wait_for_ack(socket);
-	evm_log_debug("nl_wait_for_ack returned %d\n", ret);
-	if (ret < 0) {
-		evm_log_error("Kernel action failed!\n");
-//		exit(EXIT_FAILURE);
-//		exit(-ret);
+	switch (cfg_req->command_action) {
+	case RAFT_CFG_CMD_SHOW:
+		switch (cfg_req->object_type) {
+		case RAFT_NLA_CLUSTER:
+			/* set the callback function to receive answers to recv_msg */
+//			if (nl_socket_modify_cb(socket, NL_CB_MSG_IN, NL_CB_CUSTOM, recv_msg_cluster_dump, &err) < 0) {
+			if ((ret = nl_socket_modify_cb(socket, NL_CB_MSG_IN, NL_CB_CUSTOM, recv_msg_cluster_dump, NULL)) < 0) {
+				evm_log_error("error setting callback function\n");
+				goto out;
+			}
+			evm_log_debug("show cluster command: ret=%d\n", ret);
+			break;
+		case RAFT_NLA_DOMAIN:
+		case RAFT_NLA_NODE:
+			break;
+		}
+		ret = nl_recvmsgs_default(socket);
+		if (ret < 0) {
+			evm_log_error("ERROR: nl_recvmsgs_default() returned %d (%s).\n", ret, nl_geterror(-ret));
+			goto out;
+		}
+		break;
+	default:
+		ret = nl_wait_for_ack(socket);
+		evm_log_debug("nl_wait_for_ack returned %d\n", ret);
+		if (ret < 0) {
+			evm_log_error("Kernel action failed!\n");
+//			exit(EXIT_FAILURE);
+//			exit(-ret);
+		}
 	}
 	return ret;
 
-#if 0
-//	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &err);
-
-	/* set the callback function to receive answers to recv_msg */
-	if (nl_socket_modify_cb(socket, NL_CB_MSG_IN, NL_CB_CUSTOM, recv_msg, &err) < 0) {
-		evm_log_error("error setting callback function\n");
-		
-		goto out;
-	}
-
-	while (err > 0)
-//		nl_recvmsgs(socket, cb);
-		nl_recvmsgs_default(socket);
-
 out:
-//	nl_cb_put(cb);
+	nl_cb_put(cb);
 
 	nl_socket_free(socket);
 
-	return 0;
-#endif
+	return ret;
 }
 
 
