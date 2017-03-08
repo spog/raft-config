@@ -592,7 +592,6 @@ static int recv_msg_cluster_dump(struct nl_msg *msg, void *arg)
 		[RAFT_NLA_CLUSTER_ID]		= { .type = NLA_U32 },
 	};
 
-
 //	printf("recv_msg_cluster_dump\n");
 	struct genlmsghdr *ghdr = nlmsg_data(nlh);
 	if (nla_parse(attrs, RAFT_NLA_MAX, genlmsg_attrdata(ghdr, 0),
@@ -612,7 +611,110 @@ static int recv_msg_cluster_dump(struct nl_msg *msg, void *arg)
 		return NL_SKIP;
 	}
 	if (!cluster_attrs[RAFT_NLA_CLUSTER_ID]) return NL_SKIP;
-	printf("Cluster: ID %u\n", nla_get_u32(cluster_attrs[RAFT_NLA_CLUSTER_ID]));
+	printf("cluster %u\n", nla_get_u32(cluster_attrs[RAFT_NLA_CLUSTER_ID]));
+
+	return NL_SKIP;
+}
+
+static int recv_msg_domain_dump(struct nl_msg *msg, void *arg)
+{
+	static int first = 1;
+	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+	struct nlattr *attrs[RAFT_NLA_MAX+1];
+	struct nlattr *domain_attrs[RAFT_NLA_DOMAIN_MAX+1];
+	/* Properties valid for domain */
+	struct nla_policy raft_nl_domain_policy[RAFT_NLA_DOMAIN_MAX + 1] = {
+		[RAFT_NLA_DOMAIN_UNSPEC]	= { .type = NLA_UNSPEC },
+		[RAFT_NLA_DOMAIN_ID]		= { .type = NLA_U32 },
+		[RAFT_NLA_DOMAIN_HEARTBEAT]	= { .type = NLA_U32 },
+		[RAFT_NLA_DOMAIN_ELECTION]	= { .type = NLA_U32 },
+		[RAFT_NLA_DOMAIN_MAXNODES]	= { .type = NLA_U32 },
+		[RAFT_NLA_DOMAIN_CLUSTERID]	= { .type = NLA_U32 },
+	};
+
+//	printf("recv_msg_domain_dump\n");
+	struct genlmsghdr *ghdr = nlmsg_data(nlh);
+	if (nla_parse(attrs, RAFT_NLA_MAX, genlmsg_attrdata(ghdr, 0),
+			 genlmsg_attrlen(ghdr, 0), NULL) < 0) {
+		evm_log_error("couldn't parse attributes\n");
+		return -1;
+	}
+
+	/* the data is in the attribute RAFT_NLA_DOMAIN */
+	if (!attrs[RAFT_NLA_DOMAIN]) {
+		evm_log_error("domain info missing\n");
+		return NL_SKIP;
+	}
+
+	if (nla_parse_nested(domain_attrs, RAFT_NLA_DOMAIN_MAX, attrs[RAFT_NLA_DOMAIN], raft_nl_domain_policy)) {
+		evm_log_error("failed to parse nested attributes!\n");
+		return NL_SKIP;
+	}
+	if (first) {
+		first = 0;
+		if (!domain_attrs[RAFT_NLA_DOMAIN_CLUSTERID]) return NL_SKIP;
+		printf("cluster %u:\n", nla_get_u32(domain_attrs[RAFT_NLA_DOMAIN_CLUSTERID]));
+	}
+	if (!domain_attrs[RAFT_NLA_DOMAIN_ID]) return NL_SKIP;
+	printf("    domain %u:\n", nla_get_u32(domain_attrs[RAFT_NLA_DOMAIN_ID]));
+	if (!domain_attrs[RAFT_NLA_DOMAIN_HEARTBEAT]) return NL_SKIP;
+	printf("        heartbeat %u\n", nla_get_u32(domain_attrs[RAFT_NLA_DOMAIN_HEARTBEAT]));
+	if (!domain_attrs[RAFT_NLA_DOMAIN_ELECTION]) return NL_SKIP;
+	printf("        election %u\n", nla_get_u32(domain_attrs[RAFT_NLA_DOMAIN_ELECTION]));
+	if (!domain_attrs[RAFT_NLA_DOMAIN_MAXNODES]) return NL_SKIP;
+	printf("        maxnodes %u\n", nla_get_u32(domain_attrs[RAFT_NLA_DOMAIN_MAXNODES]));
+
+	return NL_SKIP;
+}
+
+static int recv_msg_node_dump(struct nl_msg *msg, void *arg)
+{
+	static int first = 1;
+	uint32_t ip;
+	uint8_t *byte_ptr_ip = &ip;
+	struct nlmsghdr *nlh = nlmsg_hdr(msg);
+	struct nlattr *attrs[RAFT_NLA_MAX+1];
+	struct nlattr *node_attrs[RAFT_NLA_NODE_MAX+1];
+	/* Properties valid for node */
+	struct nla_policy raft_nl_node_policy[RAFT_NLA_NODE_MAX + 1] = {
+		[RAFT_NLA_NODE_UNSPEC]		= { .type = NLA_UNSPEC },
+		[RAFT_NLA_NODE_ID]		= { .type = NLA_U32 },
+		[RAFT_NLA_NODE_CONTACT]		= { .type = NLA_U32 },
+		[RAFT_NLA_NODE_DOMAINID]	= { .type = NLA_U32 },
+		[RAFT_NLA_NODE_CLUSTERID]	= { .type = NLA_U32 },
+		[RAFT_NLA_NODE_UP]		= { .type = NLA_FLAG }
+	};
+
+//	printf("recv_msg_node_dump\n");
+	struct genlmsghdr *ghdr = nlmsg_data(nlh);
+	if (nla_parse(attrs, RAFT_NLA_MAX, genlmsg_attrdata(ghdr, 0),
+			 genlmsg_attrlen(ghdr, 0), NULL) < 0) {
+		evm_log_error("couldn't parse attributes\n");
+		return -1;
+	}
+
+	/* the data is in the attribute RAFT_NLA_NODE */
+	if (!attrs[RAFT_NLA_NODE]) {
+		evm_log_error("node info missing\n");
+		return NL_SKIP;
+	}
+
+	if (nla_parse_nested(node_attrs, RAFT_NLA_NODE_MAX, attrs[RAFT_NLA_NODE], raft_nl_node_policy)) {
+		evm_log_error("failed to parse nested attributes!\n");
+		return NL_SKIP;
+	}
+	if (first) {
+		first = 0;
+		if (!node_attrs[RAFT_NLA_NODE_CLUSTERID]) return NL_SKIP;
+		printf("cluster %u:\n", nla_get_u32(node_attrs[RAFT_NLA_NODE_CLUSTERID]));
+		if (!node_attrs[RAFT_NLA_NODE_DOMAINID]) return NL_SKIP;
+		printf("    domain %u:\n", nla_get_u32(node_attrs[RAFT_NLA_NODE_DOMAINID]));
+	}
+	if (!node_attrs[RAFT_NLA_NODE_ID]) return NL_SKIP;
+	printf("        node %u:\n", nla_get_u32(node_attrs[RAFT_NLA_NODE_ID]));
+	if (!node_attrs[RAFT_NLA_NODE_CONTACT]) return NL_SKIP;
+	ip = nla_get_u32(node_attrs[RAFT_NLA_NODE_CONTACT]);
+	printf("            contact %u.%u.%u.%u\n", *(byte_ptr_ip), *(byte_ptr_ip+1), *(byte_ptr_ip+2), *(byte_ptr_ip+3));
 
 	return NL_SKIP;
 }
@@ -838,8 +940,7 @@ int raft_config_request(struct raft_config_req *cfg_req)
 	case RAFT_CFG_CMD_SHOW:
 		switch (cfg_req->object_type) {
 		case RAFT_NLA_CLUSTER:
-			/* set the callback function to receive answers to recv_msg */
-//			if (nl_socket_modify_cb(socket, NL_CB_MSG_IN, NL_CB_CUSTOM, recv_msg_cluster_dump, &err) < 0) {
+			/* set the callback function to receive answers */
 			if ((ret = nl_socket_modify_cb(socket, NL_CB_MSG_IN, NL_CB_CUSTOM, recv_msg_cluster_dump, NULL)) < 0) {
 				evm_log_error("error setting callback function\n");
 				goto out;
@@ -847,7 +948,20 @@ int raft_config_request(struct raft_config_req *cfg_req)
 			evm_log_debug("show cluster command: ret=%d\n", ret);
 			break;
 		case RAFT_NLA_DOMAIN:
+			/* set the callback function to receive answers */
+			if ((ret = nl_socket_modify_cb(socket, NL_CB_MSG_IN, NL_CB_CUSTOM, recv_msg_domain_dump, NULL)) < 0) {
+				evm_log_error("error setting callback function\n");
+				goto out;
+			}
+			evm_log_debug("show domain command: ret=%d\n", ret);
+			break;
 		case RAFT_NLA_NODE:
+			/* set the callback function to receive answers */
+			if ((ret = nl_socket_modify_cb(socket, NL_CB_MSG_IN, NL_CB_CUSTOM, recv_msg_node_dump, NULL)) < 0) {
+				evm_log_error("error setting callback function\n");
+				goto out;
+			}
+			evm_log_debug("show node command: ret=%d\n", ret);
 			break;
 		}
 		ret = nl_recvmsgs_default(socket);
